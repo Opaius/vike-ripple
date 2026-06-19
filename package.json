@@ -1,0 +1,22 @@
+{
+  "name": "vike-ripple",
+  "version": "0.1.0",
+  "description": "Vike (vike.dev) integration for Ripple TS — SSR, CSR, streaming, head management",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./setup": "./src/setup.js"
+  },
+  "bin": {
+    "vike-ripple": "./src/setup.js"
+  },
+  "files": ["src"],
+  "keywords": ["vike", "ripple", "ripplets", "ssr", "vite"],
+  "license": "MIT",
+  "peerDependencies": {
+    "vike": ">=0.4.259",
+    "@ripple-ts/vite-plugin": ">=0.3.0",
+    "ripple": ">=0.1.0"
+  }
+}
