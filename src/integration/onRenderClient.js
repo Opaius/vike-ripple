@@ -22,6 +22,10 @@ const onRenderClient = async (pageContext) => {
 
   // ── Build same component tree as SSR ──
   // Apply Layouts (innermost first → outermost last)
+  // Children must be tsrx_element(() => Component({})) — NOT tsrx_element(Component).
+  // The normal form passes Component as the render function; Ripple's render_tsrx_element
+  // calls it with (anchor, block), which Component interprets as props, corrupting block tracking.
+  // The () => Component({}) wrapper gives Component the proper props object.
   const Layout = config.Layout ?? config.layout
   const Wrapper = config.Wrapper ?? config.wrapper
   let component = Page
@@ -30,14 +34,14 @@ const onRenderClient = async (pageContext) => {
     for (let i = 0; i < layouts.length; i++) {
       const L = layouts[i]
       const prev = component
-      component = (props) => L({ ...props, children: tsrx_element(prev) })
+      component = (props) => L({ ...props, children: tsrx_element(() => prev({})) })
     }
   }
   if (Wrapper) {
     const wrappers = Array.isArray(Wrapper) ? Wrapper : [Wrapper]
     for (const W of wrappers) {
       const prev = component
-      component = (props) => W({ ...props, children: tsrx_element(prev) })
+      component = (props) => W({ ...props, children: tsrx_element(() => prev({})) })
     }
   }
 
@@ -48,8 +52,6 @@ const onRenderClient = async (pageContext) => {
   }
 
   // Always use mount() — hydrate() crashes Ripple's hmr wrapper (hydrate_node is null).
-  // mount() clears the container (target.textContent = '') and renders fresh.
-  // Ripple SSR is used for content delivery; client side always re-renders.
   const { mount } = await import('ripple')
   dispose = mount(component, { target: container, props: {} })
   setHydrated()
