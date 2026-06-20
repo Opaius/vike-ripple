@@ -1,13 +1,23 @@
 /**
- * @vike-ripple/vike-ripple — Vike integration for Ripple TS.
+ * vike-ripple — Vike extension for Ripple TS.
  *
  * ## Setup
- * Run once:  npx vike-ripple setup
- * Or add to package.json:  "postinstall": "vike-ripple setup"
+ * 1. Import config in your renderer/+config.ts:
+ *    import vikeRipple from 'vike-ripple/config'
  *
- * Then add the Vite plugin to vite.config.ts:
- *   import vikeRipple from '@vike-ripple/vike-ripple'
- *   // in plugins: vikeRipple(),
+ * 2. Run setup (once):
+ *    npx vike-ripple setup
+ *
+ * 3. Add optimizeDeps to vite.config.ts:
+ *    optimizeDeps: { exclude: ['ripple'] }
+ *
+ * ## Usage
+ * - +Head.tsrx — inject <head> content
+ * - +Layout.tsrx — layout components
+ * - +title.ts — per-page title
+ * - +description.ts — per-page description
+ * - +ssr.ts — per-page SSR toggle
+ * - +stream.ts — per-page streaming toggle
  */
 export default function vikeRipple() {
   return {

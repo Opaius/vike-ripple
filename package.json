@@ -1,18 +1,34 @@
 {
   "name": "vike-ripple",
-  "version": "0.1.0",
-  "description": "Vike (vike.dev) integration for Ripple TS — SSR, CSR, streaming, head management",
+  "version": "0.3.0",
+  "description": "Vike extension for Ripple TS — full parity with vike-react/vike-solid/vike-vue",
   "type": "module",
-  "main": "./src/index.js",
+  "types": "./src/types/Config.ts",
   "exports": {
     ".": "./src/index.js",
-    "./setup": "./src/setup.js"
+    "./config": "./src/+config.js",
+    "./setup": "./src/setup.js",
+    "./Head": "./src/components/Head/Head-server.js",
+    "./ClientOnly": "./src/components/ClientOnly.js",
+    "./usePageContext": "./src/hooks/usePageContext.js",
+    "./useData": "./src/hooks/useData.js",
+    "./useConfig": "./src/hooks/useConfig.js",
+    "./src/integration/onRenderHtml.js": "./src/integration/onRenderHtml.js",
+    "./src/integration/onRenderClient.js": "./src/integration/onRenderClient.js"
   },
   "bin": {
     "vike-ripple": "./src/setup.js"
   },
-  "files": ["src"],
-  "keywords": ["vike", "ripple", "ripplets", "ssr", "vite"],
+  "files": [
+    "src"
+  ],
+  "keywords": [
+    "vike",
+    "ripple",
+    "ripplets",
+    "ssr",
+    "vite"
+  ],
   "license": "MIT",
   "peerDependencies": {
     "vike": ">=0.4.259",

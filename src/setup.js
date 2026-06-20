@@ -6,11 +6,11 @@
  * Or add to project's package.json:  "postinstall": "vike-ripple setup"
  */
 import { createRequire } from 'module'
-import { join, dirname } from 'path'
+import { join } from 'path'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { fileURLToPath } from 'url'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const projectRoot = process.cwd()
 let exitCode = 0
 
@@ -61,7 +61,7 @@ function patchRippleDirect() {
   log('Patched Ripple plugin for ?direct CSS module loading')
 }
 
-// ── Patch 3: @apply support (tailwindcss integration) ──────────
+// ── Patch 3: @apply support ───────────────────────────────────
 function patchRippleApply() {
   const target = resolveRipple('src/index.js')
   if (!target) return
@@ -76,12 +76,16 @@ function patchRippleApply() {
       '// TW_PATCH: prepend tailwindcss so @apply works',
       '// TW_PATCH_APPLY: bring tailwindcss into scope for @apply',
     )
+    src = src.replace(
+      "css = '@import \"tailwindcss\";\\n' + css;",
+      "css = '@import \"tailwindcss\" layer(reference);\\n' + css;",
+    )
     writeFileSync(target, src, 'utf-8')
-    log('Upgraded @apply patch format')
+    log('Upgraded @apply patch to layer(reference) (HMR-safe)')
     return
   }
 
-  // Fresh install — original unpatched code
+  // Fresh install — prepend @import with reference layer
   const orig = (
     '\t\t\t\t\tif (css) {\n' +
     '\t\t\t\t\t\tconst cssId = createVirtualImportId(filename, root, \'style\');\n' +
@@ -90,7 +94,7 @@ function patchRippleApply() {
   const patched = (
     '\t\t\t\t\tif (css) {\n' +
     '\t\t\t\t\t\t// TW_PATCH_APPLY: bring tailwindcss into scope for @apply\n' +
-    "\t\t\t\t\t\tcss = '@import \"tailwindcss\";\\n' + css;\n" +
+    "\t\t\t\t\t\tcss = '@import \"tailwindcss\" layer(reference);\\n' + css;\n" +
     '\t\t\t\t\t\tconst cssId = createVirtualImportId(filename, root, \'style\');\n' +
     '\t\t\t\t\t\tcssCache.set(cssId, css);'
   )
@@ -105,13 +109,13 @@ function patchRippleApply() {
 function resolveVike(rel) {
   const p = join(projectRoot, 'node_modules', 'vike', rel)
   if (existsSync(p)) return p
-  try { return createRequire(join(projectRoot, 'noop.js')).resolve('vike/' + rel) } catch { return null }
+  try { const r = createRequire(join(projectRoot, 'package.json')); return r.resolve('vike/' + rel) } catch { return null }
 }
 
 function resolveRipple(rel) {
   const p = join(projectRoot, 'node_modules', '@ripple-ts', 'vite-plugin', rel)
   if (existsSync(p)) return p
-  try { return createRequire(join(projectRoot, 'noop.js')).resolve('@ripple-ts/vite-plugin/' + rel) } catch { return null }
+  try { const r = createRequire(join(projectRoot, 'package.json')); return r.resolve('@ripple-ts/vite-plugin/' + rel) } catch { return null }
 }
 
 // ── Main ──────────────────────────────────────────────────────
