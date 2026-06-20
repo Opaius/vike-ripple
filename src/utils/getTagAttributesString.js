@@ -1,10 +1,10 @@
-export function getTagAttributesString(attributes) {
-  if (!attributes) return ''
-  return Object.entries(attributes)
-    .map(([key, value]) => {
-      if (value === true) return ` ${key}`
-      if (value === false || value === null || value === undefined) return ''
-      return ` ${key}="${String(value).replace(/"/g, '&quot;')}"`
+export function getTagAttributesString(attrs) {
+  if (!attrs) return ''
+  return Object.entries(attrs)
+    .map(([k, v]) => {
+      if (v === true) return ` ${k}`
+      if (!v) return ''
+      return ` ${k}="${String(v).replace(/"/g, '&quot;')}"`
     })
     .join('')
 }

@@ -1,3 +1,1 @@
-export function Head() {
-  return null
-}
+export function Head() { return null }

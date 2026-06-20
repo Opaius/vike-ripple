@@ -1,7 +1,7 @@
 export { getHeadSetting }
 
 function getHeadSetting(key, pageContext) {
-  const value = pageContext.config[key]
-  if (value !== undefined && value !== null) return value
+  const v = pageContext.config[key]
+  if (v !== undefined && v !== null) return v
   return pageContext._configViaHook?.[key] ?? null
 }

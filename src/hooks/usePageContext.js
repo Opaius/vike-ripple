@@ -1,6 +1,12 @@
-export function usePageContext() {
-  const pageContext = typeof window !== 'undefined'
-    ? window.__vike_pageContext
-    : globalThis.__vike_pageContext
-  return pageContext
+export { usePageContext }
+export { setPageContext }
+
+let _pageContext = null
+
+function usePageContext() {
+  return _pageContext
+}
+
+function setPageContext(ctx) {
+  _pageContext = ctx
 }

@@ -1,6 +1,8 @@
-import { useConfig } from '../hooks/useConfig.js'
+export { Config }
 
-export function Config(values) {
-  useConfig()(values)
+import { useConfig } from '../../hooks/useConfig/useConfig-server.js'
+
+function Config(props) {
+  useConfig()(props)
   return null
 }

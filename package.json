@@ -1,20 +1,31 @@
 {
   "name": "vike-ripple",
-  "version": "0.3.0",
-  "description": "Vike extension for Ripple TS — full parity with vike-react/vike-solid/vike-vue",
+  "version": "0.4.1",
+  "description": "Vike extension for Ripple TS — SSR, streaming, Layout, Head, SEO configs, hooks",
   "type": "module",
-  "types": "./src/types/Config.ts",
   "exports": {
     ".": "./src/index.js",
-    "./config": "./src/+config.js",
+    "./config": "./src/config.js",
     "./setup": "./src/setup.js",
-    "./Head": "./src/components/Head/Head-server.js",
-    "./ClientOnly": "./src/components/ClientOnly.js",
     "./usePageContext": "./src/hooks/usePageContext.js",
     "./useData": "./src/hooks/useData.js",
-    "./useConfig": "./src/hooks/useConfig.js",
-    "./src/integration/onRenderHtml.js": "./src/integration/onRenderHtml.js",
-    "./src/integration/onRenderClient.js": "./src/integration/onRenderClient.js"
+    "./useHydrated": "./src/hooks/useHydrated.js",
+    "./useConfig": {
+      "browser": "./src/hooks/useConfig/useConfig-client.js",
+      "default": "./src/hooks/useConfig/useConfig-server.js"
+    },
+    "./Config": {
+      "browser": "./src/components/Config/Config-client.js",
+      "default": "./src/components/Config/Config-server.js"
+    },
+    "./Head": {
+      "browser": "./src/components/Head/Head-client.js",
+      "default": "./src/components/Head/Head-server.js"
+    },
+    "./clientOnly": "./src/helpers/clientOnly.js",
+    "./ClientOnly": "./src/components/ClientOnly.js",
+    "./__internal/integration/onRenderHtml": "./src/integration/onRenderHtml.js",
+    "./__internal/integration/onRenderClient": "./src/integration/onRenderClient.js"
   },
   "bin": {
     "vike-ripple": "./src/setup.js"

@@ -1,0 +1,44 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Fragment innerHTML > renders dynamic innerHTML fragments 1`] = `
+<div>
+  <!---->
+  <!---->
+  <div>
+    Test
+  </div>
+  <!---->
+  <button>
+    Update
+  </button>
+  <!---->
+  
+</div>
+`;
+
+exports[`Fragment innerHTML > renders dynamic innerHTML fragments 2`] = `
+<div>
+  <!---->
+  <!---->
+  <div>
+    Updated
+  </div>
+  <!---->
+  <button>
+    Update
+  </button>
+  <!---->
+  
+</div>
+`;
+
+exports[`Fragment innerHTML > renders static innerHTML fragments 1`] = `
+<div>
+  <!---->
+  <div>
+    Test
+  </div>
+  <!---->
+  
+</div>
+`;

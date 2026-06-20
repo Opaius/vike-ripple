@@ -1,6 +1,7 @@
+export { useData }
+
 import { usePageContext } from './usePageContext.js'
 
-export function useData() {
-  const pageContext = usePageContext()
-  return pageContext?.data
+function useData() {
+  return usePageContext()?.data
 }

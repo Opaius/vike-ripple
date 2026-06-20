@@ -1,7 +1,8 @@
-import { useConfig } from '../hooks/useConfig.js'
+export { Head }
 
-export function Head({ children }) {
-  const config = useConfig()
-  config({ Head: children })
+import { useConfig } from '../../hooks/useConfig/useConfig-server.js'
+
+function Head({ children }) {
+  useConfig()({ Head: children })
   return null
 }
