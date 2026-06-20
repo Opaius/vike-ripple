@@ -1,37 +1,73 @@
 export { onRenderClient }
 
-import { hydrate } from 'ripple'
 import { setPageContext } from '../hooks/usePageContext.js'
 import { setHydrated } from '../hooks/useHydrated.js'
 
-let hydrated = false
+// tsrx_element — wraps a component fn as a Ripple TSRX element (matches ripple/internal)
+const tsrx_element = (fn) => ({
+  render: fn,
+  [Symbol.for('ripple.element')]: true
+})
+
+/** @type {(() => void) | null} */
+let dispose = null
 
 const onRenderClient = async (pageContext) => {
-  const { Page } = pageContext
+  console.log('[vike-ripple] onRenderClient', {
+    isHydration: pageContext.isHydration,
+    url: pageContext.urlOriginal,
+    hasPage: !!pageContext.Page,
+    hasLayout: !!pageContext.config?.Layout,
+    hasWrapper: !!pageContext.config?.Wrapper,
+  })
+
+  const { Page, config } = pageContext
   if (!Page) return
 
   setPageContext(pageContext)
   const container = document.getElementById('root')
   if (!container) return
 
-  // Hydration — only on the very first page load (SSR)
-  if (pageContext.isHydration && container.innerHTML !== '' && !hydrated) {
-    try {
-      hydrate(Page, { target: container, props: {} })
-      hydrated = true
-      setHydrated()
-      return
-    } catch (err) {
-      console.warn('[vike-ripple] hydrate failed, falling back to mount:', err)
+  console.log('[vike-ripple] container child count before:', container.childElementCount)
+
+  // ── Build same component tree as SSR ──
+  // Apply Layouts (innermost first → outermost last)
+  const Layout = config.Layout ?? config.layout
+  const Wrapper = config.Wrapper ?? config.wrapper
+  let component = Page
+  if (Layout) {
+    const layouts = Array.isArray(Layout) ? Layout : [Layout]
+    for (let i = 0; i < layouts.length; i++) {
+      const L = layouts[i]
+      const prev = component
+      component = (props) => L({ ...props, children: tsrx_element(prev) })
+    }
+  }
+  if (Wrapper) {
+    const wrappers = Array.isArray(Wrapper) ? Wrapper : [Wrapper]
+    for (const W of wrappers) {
+      const prev = component
+      component = (props) => W({ ...props, children: tsrx_element(prev) })
     }
   }
 
-  // Mount — initial load (if hydrate failed) AND HMR / client navigation
-  const { mount } = await import('ripple')
-  // Clear container before mount to prevent duplicate content
-  // (during HMR the old content is still in the DOM)
-  if (!pageContext.isHydration) container.innerHTML = ''
-  mount(Page, { target: container, props: {} })
-  hydrated = true
+  // ── Clean up previous root ──
+  if (dispose) {
+    console.log('[vike-ripple] disposing previous root')
+    dispose()
+    dispose = null
+  }
+
+  // ── Hydrate or mount ──
+  if (pageContext.isHydration && container.innerHTML !== '') {
+    const { hydrate } = await import('ripple')
+    console.log('[vike-ripple] using hydrate')
+    dispose = hydrate(component, { target: container, props: {} })
+  } else {
+    const { mount } = await import('ripple')
+    console.log('[vike-ripple] using mount')
+    dispose = mount(component, { target: container, props: {} })
+  }
   setHydrated()
+  console.log('[vike-ripple] container child count after:', container.childElementCount)
 }

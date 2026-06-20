@@ -26,7 +26,7 @@ const onRenderHtml = async (pageContext) => {
   const Wrapper = pageContext.config.Wrapper
   if (Layout) {
     const layouts = Array.isArray(Layout) ? Layout : [Layout]
-    for (let i = layouts.length - 1; i >= 0; i--) {
+    for (let i = 0; i < layouts.length; i++) {
       const L = layouts[i]
       const prev = wrappedPage
       wrappedPage = (props) => L({ ...props, children: tsrx_element(prev) })
