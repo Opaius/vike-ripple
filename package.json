@@ -1,6 +1,6 @@
 {
   "name": "vike-ripple",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Vike extension for Ripple TS — SSR, streaming, Layout, Head, SEO configs, hooks",
   "type": "module",
   "exports": {
