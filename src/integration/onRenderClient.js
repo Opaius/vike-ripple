@@ -4,7 +4,7 @@ import { hydrate } from 'ripple'
 import { setPageContext } from '../hooks/usePageContext.js'
 import { setHydrated } from '../hooks/useHydrated.js'
 
-let rendered = false
+let hydrated = false
 
 const onRenderClient = async (pageContext) => {
   const { Page } = pageContext
@@ -14,20 +14,24 @@ const onRenderClient = async (pageContext) => {
   const container = document.getElementById('root')
   if (!container) return
 
-  if (pageContext.isHydration && container.innerHTML !== '') {
+  // Hydration — only on the very first page load (SSR)
+  if (pageContext.isHydration && container.innerHTML !== '' && !hydrated) {
     try {
       hydrate(Page, { target: container, props: {} })
-      rendered = true
+      hydrated = true
       setHydrated()
+      return
     } catch (err) {
       console.warn('[vike-ripple] hydrate failed, falling back to mount:', err)
     }
   }
 
-  if (!rendered) {
-    const { mount } = await import('ripple')
-    mount(Page, { target: container, props: {} })
-    rendered = true
-    setHydrated()
-  }
+  // Mount — initial load (if hydrate failed) AND HMR / client navigation
+  const { mount } = await import('ripple')
+  // Clear container before mount to prevent duplicate content
+  // (during HMR the old content is still in the DOM)
+  if (!pageContext.isHydration) container.innerHTML = ''
+  mount(Page, { target: container, props: {} })
+  hydrated = true
+  setHydrated()
 }
