@@ -13,22 +13,12 @@ const tsrx_element = (fn) => ({
 let dispose = null
 
 const onRenderClient = async (pageContext) => {
-  console.log('[vike-ripple] onRenderClient', {
-    isHydration: pageContext.isHydration,
-    url: pageContext.urlOriginal,
-    hasPage: !!pageContext.Page,
-    hasLayout: !!pageContext.config?.Layout,
-    hasWrapper: !!pageContext.config?.Wrapper,
-  })
-
   const { Page, config } = pageContext
   if (!Page) return
 
   setPageContext(pageContext)
   const container = document.getElementById('root')
   if (!container) return
-
-  console.log('[vike-ripple] container child count before:', container.childElementCount)
 
   // ── Build same component tree as SSR ──
   // Apply Layouts (innermost first → outermost last)
@@ -53,21 +43,26 @@ const onRenderClient = async (pageContext) => {
 
   // ── Clean up previous root ──
   if (dispose) {
-    console.log('[vike-ripple] disposing previous root')
     dispose()
     dispose = null
   }
 
   // ── Hydrate or mount ──
+  // Hydrate preserves SSR HTML; mount clears and re-renders.
+  // mount() is the stable fallback when hydration fails (e.g. during HMR reload).
+  const { mount, hydrate } = await import('ripple')
+
   if (pageContext.isHydration && container.innerHTML !== '') {
-    const { hydrate } = await import('ripple')
-    console.log('[vike-ripple] using hydrate')
-    dispose = hydrate(component, { target: container, props: {} })
-  } else {
-    const { mount } = await import('ripple')
-    console.log('[vike-ripple] using mount')
-    dispose = mount(component, { target: container, props: {} })
+    try {
+      dispose = hydrate(component, { target: container, props: {} })
+      setHydrated()
+      return
+    } catch (err) {
+      console.warn('[vike-ripple] hydrate failed, falling back to mount:', err)
+    }
   }
+
+  // mount() clears container internally (target.textContent = '')
+  dispose = mount(component, { target: container, props: {} })
   setHydrated()
-  console.log('[vike-ripple] container child count after:', container.childElementCount)
 }
