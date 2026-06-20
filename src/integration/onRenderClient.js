@@ -47,22 +47,10 @@ const onRenderClient = async (pageContext) => {
     dispose = null
   }
 
-  // ── Hydrate or mount ──
-  // Hydrate preserves SSR HTML; mount clears and re-renders.
-  // mount() is the stable fallback when hydration fails (e.g. during HMR reload).
-  const { mount, hydrate } = await import('ripple')
-
-  if (pageContext.isHydration && container.innerHTML !== '') {
-    try {
-      dispose = hydrate(component, { target: container, props: {} })
-      setHydrated()
-      return
-    } catch (err) {
-      console.warn('[vike-ripple] hydrate failed, falling back to mount:', err)
-    }
-  }
-
-  // mount() clears container internally (target.textContent = '')
+  // Always use mount() — hydrate() crashes Ripple's hmr wrapper (hydrate_node is null).
+  // mount() clears the container (target.textContent = '') and renders fresh.
+  // Ripple SSR is used for content delivery; client side always re-renders.
+  const { mount } = await import('ripple')
   dispose = mount(component, { target: container, props: {} })
   setHydrated()
 }
