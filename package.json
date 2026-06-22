@@ -1,7 +1,7 @@
 {
   "name": "vike-ripple",
   "version": "0.5.3",
-  "description": "Vike extension for Ripple TS \u2014 SSR, streaming, Layout, Head, SEO configs, hooks",
+  "description": "Vike extension for Ripple TS — SSR, streaming, Layout, Head, SEO configs, hooks",
   "type": "module",
   "exports": {
     ".": {
@@ -61,7 +61,7 @@
     }
   },
   "bin": {
-    "vike-ripple": "./src/setup.js"
+    "vike-ripple": "src/setup.js"
   },
   "files": [
     "src"
