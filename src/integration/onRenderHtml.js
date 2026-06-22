@@ -8,92 +8,97 @@ import { getHeadSetting } from './getHeadSetting.js'
 import { getTagAttributesString } from '../utils/getTagAttributesString.js'
 import { callCumulativeHooks } from '../utils/callCumulativeHooks.js'
 
+import { AsyncLocalStorage } from 'node:async_hooks'
+globalThis.__ripple_page_context_storage ??= new AsyncLocalStorage()
+
 const onRenderHtml = async (pageContext) => {
-  const { Page } = pageContext
-  if (!Page) throw new Error('No Page')
+  return globalThis.__ripple_page_context_storage.run(pageContext, async () => {
+    const { Page } = pageContext
+    if (!Page) throw new Error('No Page')
 
-  await callCumulativeHooks(pageContext.config.onBeforeRenderHtml, pageContext)
+    await callCumulativeHooks(pageContext.config.onBeforeRenderHtml, pageContext)
 
-  setPageContext(pageContext)
+    setPageContext(pageContext)
 
-  const headHtml = getHeadHtml(pageContext)
-  const { headHtmlBegin, headHtmlEnd, bodyHtmlBegin, bodyHtmlEnd } = getHtmlInjections(pageContext)
-  const { htmlAttributesString, bodyAttributesString } = getTagAttributes(pageContext)
+    const headHtml = getHeadHtml(pageContext)
+    const { headHtmlBegin, headHtmlEnd, bodyHtmlBegin, bodyHtmlEnd } = getHtmlInjections(pageContext)
+    const { htmlAttributesString, bodyAttributesString } = getTagAttributes(pageContext)
 
-  // Wrap in Layout(s) + Wrapper(s)
-  let wrappedPage = Page
-  const Layout = pageContext.config.Layout
-  const Wrapper = pageContext.config.Wrapper
-  if (Layout) {
-    const layouts = Array.isArray(Layout) ? Layout : [Layout]
-    for (let i = 0; i < layouts.length; i++) {
-      const L = layouts[i]
-      const prev = wrappedPage
-      wrappedPage = (props) => L({ ...props, children: tsrx_element(prev) })
+    // Wrap in Layout(s) + Wrapper(s)
+    let wrappedPage = Page
+    const Layout = pageContext.config.Layout
+    const Wrapper = pageContext.config.Wrapper
+    if (Layout) {
+      const layouts = Array.isArray(Layout) ? Layout : [Layout]
+      for (let i = 0; i < layouts.length; i++) {
+        const L = layouts[i]
+        const prev = wrappedPage
+        wrappedPage = (props) => L({ ...props, children: tsrx_element(prev) })
+      }
     }
-  }
-  if (Wrapper) {
-    const wrappers = Array.isArray(Wrapper) ? Wrapper : [Wrapper]
-    for (const W of wrappers) {
-      const prev = wrappedPage
-      wrappedPage = (props) => W({ ...props, children: tsrx_element(prev) })
+    if (Wrapper) {
+      const wrappers = Array.isArray(Wrapper) ? Wrapper : [Wrapper]
+      for (const W of wrappers) {
+        const prev = wrappedPage
+        wrappedPage = (props) => W({ ...props, children: tsrx_element(prev) })
+      }
     }
-  }
 
-  const enableStream = !!(pageContext.config.stream ?? pageContext.config.rippleStream)
+    const enableStream = !!(pageContext.config.stream ?? pageContext.config.rippleStream)
 
-  if (enableStream) {
-    const rippleStream = create_ssr_stream()
-    render(wrappedPage, { stream: rippleStream.sink }).catch(e => {
-      console.error('[ripple] render err:', e?.message)
-    })
+    if (enableStream) {
+      const rippleStream = create_ssr_stream()
+      render(wrappedPage, { stream: rippleStream.sink }).catch(e => {
+        console.error('[ripple] render err:', e?.message)
+      })
+      return escapeInject`<!DOCTYPE html>
+        <html${dangerouslySkipEscape(htmlAttributesString)}>
+          <head>
+            <meta charset="UTF-8" />
+            ${dangerouslySkipEscape(headHtmlBegin)}
+            ${dangerouslySkipEscape(headHtml)}
+            ${dangerouslySkipEscape(headHtmlEnd)}
+          </head>
+          <body${dangerouslySkipEscape(bodyAttributesString)}>
+            ${dangerouslySkipEscape(bodyHtmlBegin)}
+            <div id="root">${rippleStream.stream}</div>
+            ${dangerouslySkipEscape(bodyHtmlEnd)}
+          </body>
+        </html>`
+    }
+
+    const { head, body, css, topLevelError } = await render(wrappedPage, {})
+    if (topLevelError) {
+      console.error('[vike-ripple] SSR render error:', topLevelError)
+      throw topLevelError
+    }
+
+    // Ripple's render() already extracts <head> content into `head` and CSS into `css`
+    const cssHtml = css?.size
+      ? `<style data-ripple-ssr>${[...css].join('')}<` + `/style>`
+      : ''
+
+    pageContext.pageHtmlString = body
+    await callCumulativeHooks(pageContext.config.onAfterRenderHtml, pageContext)
+
     return escapeInject`<!DOCTYPE html>
       <html${dangerouslySkipEscape(htmlAttributesString)}>
         <head>
           <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           ${dangerouslySkipEscape(headHtmlBegin)}
+          ${dangerouslySkipEscape(head)}
+          ${dangerouslySkipEscape(cssHtml)}
           ${dangerouslySkipEscape(headHtml)}
           ${dangerouslySkipEscape(headHtmlEnd)}
         </head>
-        <body${dangerouslySkipEscape(bodyAttributesString)}>
+          <body${dangerouslySkipEscape(bodyAttributesString)}>
           ${dangerouslySkipEscape(bodyHtmlBegin)}
-          <div id="root">${rippleStream.stream}</div>
+          <div id="root">${dangerouslySkipEscape(body)}</div>
           ${dangerouslySkipEscape(bodyHtmlEnd)}
         </body>
       </html>`
-  }
-
-  const { head, body, css, topLevelError } = await render(wrappedPage, {})
-  if (topLevelError) {
-    console.error('[vike-ripple] SSR render error:', topLevelError)
-    throw topLevelError
-  }
-
-  // Ripple's render() already extracts <head> content into `head` and CSS into `css`
-  const cssHtml = css?.size
-    ? `<style data-ripple-ssr>${[...css].join('')}<` + `/style>`
-    : ''
-
-  pageContext.pageHtmlString = body
-  await callCumulativeHooks(pageContext.config.onAfterRenderHtml, pageContext)
-
-  return escapeInject`<!DOCTYPE html>
-    <html${dangerouslySkipEscape(htmlAttributesString)}>
-      <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        ${dangerouslySkipEscape(headHtmlBegin)}
-        ${dangerouslySkipEscape(head)}
-        ${dangerouslySkipEscape(cssHtml)}
-        ${dangerouslySkipEscape(headHtml)}
-        ${dangerouslySkipEscape(headHtmlEnd)}
-      </head>
-      <body${dangerouslySkipEscape(bodyAttributesString)}>
-        ${dangerouslySkipEscape(bodyHtmlBegin)}
-        <div id="root">${dangerouslySkipEscape(body)}</div>
-        ${dangerouslySkipEscape(bodyHtmlEnd)}
-      </body>
-    </html>`
+  })
 }
 
 function getHeadHtml(pageContext) {

@@ -77,9 +77,184 @@ function resolveRipple(rel) {
   try { return createRequire(join(projectRoot, 'package.json')).resolve('@ripple-ts/vite-plugin/' + rel) } catch { return null }
 }
 
+function resolveRipplePackage(rel) {
+  const p = join(projectRoot, 'node_modules', 'ripple', rel)
+  if (existsSync(p)) return p
+  try { return createRequire(join(projectRoot, 'package.json')).resolve('ripple/' + rel) } catch { return null }
+}
+
+function patchRippleServer() {
+  const serverIndexFile = resolveRipplePackage('src/runtime/internal/server/index.js')
+  const serverBlocksFile = resolveRipplePackage('src/runtime/internal/server/blocks.js')
+  if (!serverIndexFile || !serverBlocksFile) {
+    warn('ripple package not found, skipping server isolation patch')
+    return
+  }
+
+  let indexContent = readFileSync(serverIndexFile, 'utf8')
+  if (indexContent.includes('const rippleSsrStorage =')) {
+    log('Ripple server isolation already applied to index.js')
+  } else {
+    const storageSetup = `
+import { AsyncLocalStorage } from 'node:async_hooks';
+
+const rippleSsrStorage = new AsyncLocalStorage();
+
+const defaultContext = () => ({
+  active_component: null,
+  active_block: null,
+  tracking: false,
+  active_dependency: null,
+  inside_async_track: false,
+  current_element: undefined,
+  seen_warnings: new Set(),
+  clock: 0
+});
+
+function getStore() {
+  let store = rippleSsrStorage.getStore();
+  if (!store) {
+    if (!globalThis.__ripple_fallback_store) {
+      globalThis.__ripple_fallback_store = defaultContext();
+    }
+    return globalThis.__ripple_fallback_store;
+  }
+  return store;
+}
+
+const varsToIsolate = [
+  'active_component',
+  'active_block',
+  'tracking',
+  'active_dependency',
+  'inside_async_track',
+  'current_element',
+  'seen_warnings',
+  'clock'
+];
+
+for (const v of varsToIsolate) {
+  Object.defineProperty(globalThis, v, {
+    get() {
+      return getStore()[v];
+    },
+    set(val) {
+      getStore()[v] = val;
+    },
+    configurable: true
+  });
+}
+`
+    const lastImportIdx = indexContent.lastIndexOf('import ')
+    const endOfLastImportLine = indexContent.indexOf('\n', lastImportIdx)
+    indexContent = indexContent.slice(0, endOfLastImportLine + 1) + storageSetup + indexContent.slice(endOfLastImportLine + 1)
+
+    const renderStartText = 'export async function render(component, passed_in_options = {}) {'
+    const renderStartIdx = indexContent.indexOf(renderStartText)
+    if (renderStartIdx === -1) {
+      warn("Could not find render function in ripple server/index.js")
+      exitCode = 1
+      return
+    }
+
+    const renderBodyStart = renderStartIdx + renderStartText.length - 1
+    let bracketCount = 1
+    let i = renderBodyStart + 1
+    while (bracketCount > 0 && i < indexContent.length) {
+      if (indexContent[i] === '{') bracketCount++
+      if (indexContent[i] === '}') bracketCount--
+      i++
+    }
+    const renderBodyEnd = i - 1
+
+    const renderBody = indexContent.slice(renderBodyStart + 1, renderBodyEnd)
+    const patchedRender = `{
+	return rippleSsrStorage.run(defaultContext(), async () => {
+		${renderBody}
+	});
+}`
+    indexContent = indexContent.slice(0, renderBodyStart) + patchedRender + indexContent.slice(renderBodyEnd + 1)
+
+    const vars = [
+      'active_block',
+      'active_component',
+      'tracking',
+      'active_dependency',
+      'inside_async_track',
+      'current_element',
+      'seen_warnings',
+      'clock'
+    ]
+
+    for (const v of vars) {
+      const regex = new RegExp(`\\b${v}\\b`, 'g')
+      indexContent = indexContent.replace(regex, '__' + v)
+    }
+
+    indexContent = indexContent.replace('export let __active_component = null;', 'export let active_component = null;')
+    indexContent = indexContent.replace('export let __active_block = null;', 'export let active_block = null;')
+    indexContent = indexContent.replace('export let __tracking = false;', 'export let tracking = false;')
+
+    writeFileSync(serverIndexFile, indexContent, 'utf8')
+    log('Patched Ripple server index.js for request isolation')
+  }
+
+  let blocksContent = readFileSync(serverBlocksFile, 'utf8')
+  if (blocksContent.includes('__active_block') && !blocksContent.includes('\tactive_block,\n')) {
+    log('Ripple server isolation already applied to blocks.js')
+  } else {
+    // Remove isolated variables from imports list first so they fallback to globalThis lookup
+    blocksContent = blocksContent.replace('\tactive_block,\n', '')
+    blocksContent = blocksContent.replace('\tactive_component,\n', '')
+
+    const vars = [
+      'active_block',
+      'active_component',
+      'tracking',
+      'active_dependency',
+      'inside_async_track',
+      'current_element',
+      'seen_warnings',
+      'clock'
+    ]
+    for (const v of vars) {
+      const regex = new RegExp(`\\b${v}\\b`, 'g')
+      blocksContent = blocksContent.replace(regex, '__' + v)
+    }
+
+    writeFileSync(serverBlocksFile, blocksContent, 'utf8')
+    log('Patched Ripple server blocks.js for request isolation')
+  }
+}
+function patchRippleSetNullBlock() {
+  const runtimeFile = resolveRipplePackage('src/runtime/internal/client/runtime.js')
+  if (!runtimeFile) {
+    warn('ripple client runtime not found, skipping set() null-block patch')
+    return
+  }
+  let src = readFileSync(runtimeFile, 'utf-8')
+  if (src.includes('/* patch: null-block guard */')) {
+    log('Ripple set() null-block guard already applied')
+    return
+  }
+  // Patch 1: guard against null block in teardown check
+  src = src.replace(
+    'if ((tracked_block.f & CONTAINS_TEARDOWN) !== 0) {',
+    'if (tracked_block !== null && (tracked_block.f & CONTAINS_TEARDOWN) !== 0) { /* patch: null-block guard */'
+  )
+  // Patch 2: guard against null block in schedule_update call
+  src = src.replace(
+    'schedule_update(tracked_block);',
+    'if (tracked_block !== null) schedule_update(tracked_block); /* patch: null-block guard */'
+  )
+  writeFileSync(runtimeFile, src, 'utf-8')
+  log('Patched Ripple set() — null-block guard applied')
+}
 log('Applying patches...')
 patchVikeExtensions()
 patchRippleDirect()
 patchRippleApply()
+patchRippleServer()
+patchRippleSetNullBlock()
 log('Done')
 process.exit(exitCode)

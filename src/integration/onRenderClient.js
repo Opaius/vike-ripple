@@ -1,6 +1,6 @@
 export { onRenderClient }
 
-import { setPageContext } from '../hooks/usePageContext.js'
+import { setPageContext, usePageContext } from '../hooks/usePageContext.js'
 import { setHydrated } from '../hooks/useHydrated.js'
 
 // tsrx_element — wraps a component fn as a Ripple TSRX element (matches ripple/internal)
@@ -11,21 +11,15 @@ const tsrx_element = (fn) => ({
 
 /** @type {(() => void) | null} */
 let dispose = null
+let rootMounted = false
 
-const onRenderClient = async (pageContext) => {
+function App() {
+  const pageContext = usePageContext()
+  if (!pageContext) return null
+
   const { Page, config } = pageContext
-  if (!Page) return
+  if (!Page) return null
 
-  setPageContext(pageContext)
-  const container = document.getElementById('root')
-  if (!container) return
-
-  // ── Build same component tree as SSR ──
-  // Apply Layouts (innermost first → outermost last)
-  // Children must be tsrx_element(() => Component({})) — NOT tsrx_element(Component).
-  // The normal form passes Component as the render function; Ripple's render_tsrx_element
-  // calls it with (anchor, block), which Component interprets as props, corrupting block tracking.
-  // The () => Component({}) wrapper gives Component the proper props object.
   const Layout = config.Layout ?? config.layout
   const Wrapper = config.Wrapper ?? config.wrapper
   let component = Page
@@ -45,14 +39,47 @@ const onRenderClient = async (pageContext) => {
     }
   }
 
-  // ── Clean up previous root ──
-  if (dispose) {
-    dispose()
-    dispose = null
+  return component({})
+}
+
+const onRenderClient = async (pageContext) => {
+  const { Page, config } = pageContext
+  if (!Page) return
+
+  // Set context BEFORE mounting so App() reads the correct pageContext on first render.
+  // We can't rely on setPageContext() triggering a Ripple reactive update here because
+  // the global tracked value is created at module scope (active_block === null), so
+  // tracked.b === null and schedule_update() is never called on navigation.
+  setPageContext(pageContext)
+
+  const container = document.getElementById('root')
+  if (!container) return
+
+  const { mount } = await import('ripple')
+
+  if (!rootMounted) {
+    // Initial load: mount fresh (always use mount(), not hydrate() —
+    // hydrate() crashes Ripple's HMR wrapper when hydrate_node is null).
+    dispose = mount(App, { target: container, props: {} })
+    rootMounted = true
+  } else {
+    // Navigation: tear down the old tree and mount fresh.
+    // Ripple's tracked() signals created at module scope have no parent block,
+    // so reactive updates don't propagate. Remounting is the correct solution.
+    if (dispose) dispose()
+    dispose = mount(App, { target: container, props: {} })
   }
 
-  // Always use mount() — hydrate() crashes Ripple's hmr wrapper (hydrate_node is null).
-  const { mount } = await import('ripple')
-  dispose = mount(component, { target: container, props: {} })
+  // Update document title and lang on page transitions
+  const title = config.title
+  if (title) {
+    document.title = typeof title === 'function' ? title(pageContext) : title
+  }
+  const lang = config.lang
+  if (lang) {
+    document.documentElement.lang = lang
+  }
+
   setHydrated()
 }
+

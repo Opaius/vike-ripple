@@ -1,7 +1,24 @@
 export { useHydrated }
 export { setHydrated }
 
-let _hydrated = false
+import { track } from 'ripple'
 
-function useHydrated() { return _hydrated }
-function setHydrated() { _hydrated = true }
+let _hydrated = null
+
+if (typeof window !== 'undefined') {
+  _hydrated = track(false)
+}
+
+function useHydrated() {
+  if (_hydrated) {
+    return _hydrated.value
+  }
+  return false
+}
+
+function setHydrated() {
+  if (_hydrated) {
+    _hydrated.value = true
+  }
+}
+
