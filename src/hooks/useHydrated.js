@@ -1,24 +1,31 @@
 export { useHydrated }
 export { setHydrated }
 
-import { track } from 'ripple'
+import { track, effect } from 'ripple'
 
-let _hydrated = null
-
-if (typeof window !== 'undefined') {
-  _hydrated = track(false)
-}
+let _isHydrated = false
+const _listeners = new Set()
 
 function useHydrated() {
-  if (_hydrated) {
-    return _hydrated.value
-  }
-  return false
+  if (_isHydrated) return true
+
+  const hydrated = track(false)
+
+  effect(() => {
+    _listeners.add(hydrated)
+    return () => {
+      _listeners.delete(hydrated)
+    }
+  })
+
+  return hydrated.value
 }
 
 function setHydrated() {
-  if (_hydrated) {
-    _hydrated.value = true
+  _isHydrated = true
+  for (const signal of _listeners) {
+    signal.value = true
   }
+  _listeners.clear()
 }
 

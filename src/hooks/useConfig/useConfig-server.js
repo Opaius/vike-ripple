@@ -16,7 +16,7 @@ function useConfig() {
   // Component
   pageContext = usePageContext()
   return (config) => {
-    if (!pageContext?._headAlreadySet) {
+    if (pageContext && !pageContext._headAlreadySet) {
       pageContext._configViaHook ??= {}
       Object.assign(pageContext._configViaHook, config)
     }

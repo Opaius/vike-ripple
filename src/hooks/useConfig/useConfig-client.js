@@ -14,12 +14,14 @@ function useConfig() {
 
   pageContext = usePageContext()
   return (config) => {
-    if (!('_headAlreadySet' in (pageContext || {}))) {
-      pageContext._configViaHook ??= {}
-      Object.assign(pageContext._configViaHook, config)
-    } else {
-      if (config.title) document.title = config.title
-      if (config.lang) document.documentElement.lang = config.lang
+    if (pageContext) {
+      if (!('_headAlreadySet' in pageContext)) {
+        pageContext._configViaHook ??= {}
+        Object.assign(pageContext._configViaHook, config)
+      } else {
+        if (config.title) document.title = config.title
+        if (config.lang) document.documentElement.lang = config.lang
+      }
     }
   }
 }

@@ -46,10 +46,8 @@ const onRenderClient = async (pageContext) => {
   const { Page, config } = pageContext
   if (!Page) return
 
-  // Set context BEFORE mounting so App() reads the correct pageContext on first render.
-  // We can't rely on setPageContext() triggering a Ripple reactive update here because
-  // the global tracked value is created at module scope (active_block === null), so
-  // tracked.b === null and schedule_update() is never called on navigation.
+  // Set context BEFORE mounting/updating so App() reads the correct pageContext.
+  // This triggers a Ripple reactive update in App and other components using usePageContext().
   setPageContext(pageContext)
 
   const container = document.getElementById('root')
@@ -62,12 +60,6 @@ const onRenderClient = async (pageContext) => {
     // hydrate() crashes Ripple's HMR wrapper when hydrate_node is null).
     dispose = mount(App, { target: container, props: {} })
     rootMounted = true
-  } else {
-    // Navigation: tear down the old tree and mount fresh.
-    // Ripple's tracked() signals created at module scope have no parent block,
-    // so reactive updates don't propagate. Remounting is the correct solution.
-    if (dispose) dispose()
-    dispose = mount(App, { target: container, props: {} })
   }
 
   // Update document title and lang on page transitions

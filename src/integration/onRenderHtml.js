@@ -33,14 +33,14 @@ const onRenderHtml = async (pageContext) => {
       for (let i = 0; i < layouts.length; i++) {
         const L = layouts[i]
         const prev = wrappedPage
-        wrappedPage = (props) => L({ ...props, children: tsrx_element(prev) })
+        wrappedPage = (props) => L({ ...props, children: tsrx_element(() => prev({})) })
       }
     }
     if (Wrapper) {
       const wrappers = Array.isArray(Wrapper) ? Wrapper : [Wrapper]
       for (const W of wrappers) {
         const prev = wrappedPage
-        wrappedPage = (props) => W({ ...props, children: tsrx_element(prev) })
+        wrappedPage = (props) => W({ ...props, children: tsrx_element(() => prev({})) })
       }
     }
 
