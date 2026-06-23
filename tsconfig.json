@@ -1,0 +1,19 @@
+{
+	"compilerOptions": {
+		"strict": true,
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"target": "ES2022",
+		"noEmit": true,
+		"skipLibCheck": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true
+	},
+	"include": [],
+	"references": [
+		{ "path": "vike-ripple" },
+		{ "path": "vike-ripple-tailwindcss" },
+		{ "path": "vike-ripple-pandacss" },
+		{ "path": "create-vike-ripple" }
+	]
+}
