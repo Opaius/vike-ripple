@@ -25,7 +25,6 @@ for (let i = 0; i < args.length; i++) {
   }
   if (!args[i].startsWith('--') && !name) name = args[i]
 }
-// ponytail: first non-flag arg is the project name
 if (!name && args.length && !args[0].startsWith('--')) name = args[0]; else if (!name) name = 'my-vike-app'
 
 if (!['tailwind', 'pandacss', 'none'].includes(style)) {
@@ -76,7 +75,7 @@ if (style === 'pandacss') {
   scripts.prepare = 'panda codegen'
 }
 if (cloudflare) {
-  scripts.types = 'wrangler types --env-interface Env worker-configuration.d.ts && true'
+  scripts.types = 'wrangler types --env-interface Env worker-configuration.d.ts'
 }
 
 writeFileSync(join(root, 'package.json'), JSON.stringify({
@@ -221,7 +220,6 @@ if (style === 'tailwind') {
     ``,
   ].join('\n'))
 }
-// ponytail: --style pandacss wiring with vike-ripple-pandacss plugin
 if (style === 'pandacss') {
   writeFileSync(join(root, 'panda.config.ts'), [
     `import { defineConfig } from '@pandacss/dev'`,
@@ -243,10 +241,9 @@ if (style === 'pandacss') {
   ].join('\n'))
 }
 
-// --- Cloudflare files ---
-if (cloudflare) {
+// --- Cloudflare files (basic) ---
+if (cloudflare && !(remult && cloudflare)) {
   mkdirSync(join(root, '.wrangler'), { recursive: true })
-
   writeFileSync(join(root, 'wrangler.jsonc'), JSON.stringify({
     $schema: 'node_modules/wrangler/config-schema.json',
     name,
@@ -254,13 +251,8 @@ if (cloudflare) {
     compatibility_date: '2026-06-01',
     compatibility_flags: ['nodejs_compat'],
   }, null, 2) + '\n')
-
   writeFileSync(join(root, '.gitignore'), [
-    `node_modules/`,
-    `dist/`,
-    `.wrangler/`,
-    `*.log`,
-    `.env`,
+    `node_modules/`, `dist/`, `.wrangler/`, `*.log`, `.env`,
   ].join('\n'))
 }
 
@@ -268,16 +260,16 @@ if (cloudflare) {
 if (remult && cloudflare) {
   mkdirSync(join(root, 'server'), { recursive: true })
   mkdirSync(join(root, 'lib'), { recursive: true })
+  mkdirSync(join(root, '.wrangler'), { recursive: true })
 
-  const projectName = name
   writeFileSync(join(root, 'wrangler.jsonc'), JSON.stringify({
     $schema: 'node_modules/wrangler/config-schema.json',
-    name: projectName,
+    name,
     main: '+server.ts',
     compatibility_date: '2026-06-01',
     compatibility_flags: ['nodejs_compat'],
     d1_databases: [
-      { binding: 'DB', database_name: projectName, database_id: 'your-database-id-here' },
+      { binding: 'DB', database_name: name, database_id: 'your-database-id-here' },
     ],
     durable_objects: {
       bindings: [
@@ -323,7 +315,6 @@ if (remult && cloudflare) {
     `import { createMiddleware } from '@vikejs/hono'`,
     ``,
     `const app = new Hono()`,
-    ``,
     `app.use('/api/*', remultApi({`,
     `  dataProvider: async () => {`,
     `    const env = process.env as unknown as Cloudflare.Env`,
@@ -348,7 +339,6 @@ if (remult && cloudflare) {
     `  headers.forEach(([name, value]) => c.header(name, value))`,
     `  return c.body(body, statusCode)`,
     `})`,
-    ``,
     `export { app }`,
     ``,
   ].join('\n'))
@@ -356,7 +346,6 @@ if (remult && cloudflare) {
   writeFileSync(join(root, 'lib', 'remult-client.ts'), [
     `import { RemultPartySubscriptionClient } from 'remult-partykit'`,
     `import { remult } from 'remult'`,
-    ``,
     `export function initRemultRealtime(host: string) {`,
     `  const client = new RemultPartySubscriptionClient({`,
     `    getSocketUrl: (roomName: string) => {`,
@@ -369,3 +358,46 @@ if (remult && cloudflare) {
     ``,
   ].join('\n'))
 
+  writeFileSync(join(root, '.gitignore'), [
+    `node_modules/`, `dist/`, `.wrangler/`, `*.log`, `.env`,
+  ].join('\n'))
+}
+
+// --- Remult only (non-CF) ---
+if (remult && !cloudflare) {
+  mkdirSync(join(root, 'server'), { recursive: true })
+  writeFileSync(join(root, 'server', 'remult.ts'), [
+    `import { remult } from 'remult'`,
+    `export const api = remult({ entities: [], getUser: async () => undefined })`,
+    ``,
+  ].join('\n'))
+}
+
+// --- install ---
+let label = `style: ${style}`
+if (cloudflare) label += ', CF Workers'
+if (remult) label += ', Remult'
+console.log(`\n  \x1b[1mCreated ${name}  (${label})\x1b[22m`)
+console.log(`  cd ${name}`)
+
+console.log(`\n  Installing dependencies...`)
+execSync('npm install', { cwd: root, stdio: 'inherit' })
+
+console.log(`\n  Running vike-ripple setup...`)
+execSync('npx --yes vike-ripple setup', { cwd: root, stdio: 'inherit' })
+
+if (style === 'tailwind') {
+  console.log(`\n  Running vike-ripple-tailwindcss setup...`)
+  execSync('npx --yes vike-ripple-tailwindcss setup', { cwd: root, stdio: 'inherit' })
+}
+if (style === 'pandacss') {
+  console.log(`\n  Running vike-ripple-pandacss setup...`)
+  execSync('npx --yes vike-ripple-pandacss setup', { cwd: root, stdio: 'inherit' })
+}
+if (cloudflare) {
+  console.log(`\n  Generating worker types...`)
+  execSync('npm run types', { cwd: root, stdio: 'inherit' })
+}
+
+console.log(`\n  \x1b[1mDone!\x1b[22m`)
+console.log(`  cd ${name} && npm run dev`)
