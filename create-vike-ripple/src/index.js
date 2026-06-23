@@ -5,6 +5,31 @@ import { execSync } from 'child_process';
 
 // --- arg parse ---
 const args = process.argv.slice(2);
+
+// help flag
+if (args.includes('--help') || args.includes('-h')) {
+	console.log(`
+create-vike-ripple — Scaffold a Vike + Ripple TS project
+
+Usage:
+  create-vike-ripple [name] [options]
+
+Options:
+  --style <name>    CSS framework: tailwind (default), pandacss, none
+  --cloudflare      Add Cloudflare Workers configuration
+  --remult          Add Remult ORM (DO-based realtime with CF, SSE without)
+  --help, -h        Show this help message
+
+Examples:
+  create-vike-ripple my-app
+  create-vike-ripple my-app --style pandacss
+  create-vike-ripple my-app --cloudflare
+  create-vike-ripple my-app --remult
+  create-vike-ripple my-app --remult --cloudflare
+`);
+	process.exit(0);
+}
+
 let name = null;
 let style = 'tailwind';
 let cloudflare = false;
