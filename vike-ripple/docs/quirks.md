@@ -102,20 +102,11 @@
 
 `@vikejs/hono` exports `vike` as a function: `vike(app, [middlewares])`. `createMiddleware` is exposed via `@universal-middleware/core` but the `vike(app, [])` pattern is simpler and works correctly in the Cloudflare Workers context.
 
-### `remult-partykit` vs `ripple-partykit`
+### `remult-partykit` only
 
-Two different npm packages with overlapping APIs:
-
-| Export | `remult-partykit` | `ripple-partykit` |
-|---|---|---|
-| `RemultPartyRoom` | ✅ `./durable-object` | ✅ `./durable-object` |
-| `RemultLiveQueryStorageRoom` | ✅ `./durable-object` | ✅ `./durable-object` |
-| `RemultPartySubscriptionClient` | ✅ `.` (index) | ✅ `.` (index) |
-| `RemultPartySubscriptionServer` | ✅ `./server` | ✅ `./server` |
-| `resolveRoomIdFromChannel` | ❌ | ✅ `./durable-object` |
-| `SmartD1Client` | ❌ | ✅ `.` (index) |
-
-The scaffold generates code importing from `remult-partykit` (the npm-published package). Do not use imports from `ripple-partykit` in scaffold templates.
+Only `remult-partykit` is used. It provides remult real-time sync over Cloudflare Durable Objects
+(RemultPartyRoom, RemultLiveQueryStorageRoom), plus Channel, sql-parser utilities,
+and RemultPartySubscriptionClient/Server. See [remult-partykit on npm](https://www.npmjs.com/package/remult-partykit).
 
 ### Remult subpath exports in workerd
 
