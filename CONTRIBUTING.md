@@ -1,37 +1,70 @@
 # Contributing
 
+Thanks for considering contributing to vike-ripple!
+
 ## Project structure
 
 ```
 vike-ripple/
-├── create-vike-ripple/        — Scaffold generator
-├── vike-ripple/               — Core integration
+├── create-vike-ripple/        — Project scaffold CLI
+├── vike-ripple/               — Core Vike + Ripple integration
 ├── vike-ripple-pandacss/      — Panda CSS integration
 └── vike-ripple-tailwindcss/   — Tailwind CSS integration
 ```
 
-Each package is self-contained in its directory. See each package's README for specifics, and `vike-ripple/docs/quirks.md` for known issues and fixes.
+Each package is self-contained in its directory. Each has its own `README.md` for install/setup. See `vike-ripple/docs/quirks.md` for known issues and design decisions.
+
+## Getting started
+
+```bash
+git clone https://github.com/Opaius/vike-ripple.git
+cd vike-ripple
+```
+
+No build step needed — all packages are plain JavaScript/TypeScript source that gets published directly.
 
 ## Making changes
 
-- Each package is self-contained in its directory.
-- Bump the version in `package.json` before releasing.
-- Update `vike-ripple/docs/quirks.md` with any new bugs, fixes, or caveats.
-- Update the root `README.md` if adding or renaming packages.
+1. Find the package directory relevant to your change
+2. Make your changes
+3. Test locally (see below)
+4. Open a pull request
+
+### Code style
+
+- The repo uses [Biome](https://biomejs.dev) for formatting and linting
+- Run `npm run lint` before committing
+- Keep functions small, prefer readable over clever
+
+### Updating documentation
+
+- If you fix a bug or discover a caveat, add it to `vike-ripple/docs/quirks.md`
+- If you add or rename a package, update the root `README.md` table
 
 ## Testing
+
+### SSR test
 
 ```bash
 # Create a test project from local source
 node create-vike-ripple/src/index.js test-app --style tailwind
+cd test-app
 
-# SSR test
-cd test-app && npx vike dev &
+# Start dev server
+npx vike dev &
+sleep 3
+
+# Check both pages render
 curl -s http://localhost:3000/ | grep -o 'Hello'
+curl -s http://localhost:3000/about | grep -o 'About'
+```
 
-# Click routing test (puppeteer-core required)
+### Click routing test
+
+```bash
 npm i puppeteer-core
-cd test-app && npx vike dev &
+cd test-app
+npx vike dev &
 node --input-type=module -e "
 import puppeteer from 'puppeteer-core';
 const b = await puppeteer.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});
@@ -42,3 +75,29 @@ console.log(await p.title());
 await b.close();
 "
 ```
+
+### Smoke test all flag combinations
+
+```bash
+node create-vike-ripple/src/index.js test-tw --style tailwind
+node create-vike-ripple/src/index.js test-pd --style pandacss
+node create-vike-ripple/src/index.js test-cf --style tailwind --cloudflare
+node create-vike-ripple/src/index.js test-rm --style tailwind --remult
+node create-vike-ripple/src/index.js test-rmcf --style pandacss --remult --cloudflare
+cd test-rmcf && npx vite build
+```
+
+## Pull request process
+
+1. Fork the repo and create a branch from `main`
+2. Make your changes
+3. Run `npm run lint` (Biome)
+4. Test with at least one SSR + click routing test
+5. Open a PR with a clear title and description of what changed and why
+6. A maintainer will review and merge
+
+## Issues
+
+- Report bugs via [GitHub Issues](https://github.com/Opaius/vike-ripple/issues)
+- Include: what you did, what you expected, what happened, and the output of `npx vike dev`
+- Check `vike-ripple/docs/quirks.md` first — your issue might be known
