@@ -33,23 +33,6 @@ Vike doesn't know about `.tsrx` files, Ripple's Vite plugin has a cache-miss bug
 
 These packages fix all three issues with minimal, automatic patches applied during `npx <package> setup`.
 
-## Structure
+## Contributing
 
-```
-vike-ripple/
-├── create-vike-ripple/        — Scaffold generator
-├── vike-ripple/               — Core integration
-├── vike-ripple-pandacss/      — Panda CSS integration
-└── vike-ripple-tailwindcss/   — Tailwind CSS integration
-```
-
-Each package has its own `README.md` with install/setup instructions. Click the links above.
-
-## Publishing
-
-```sh
-cd vike-ripple && npm publish
-cd vike-ripple-tailwindcss && npm publish
-cd vike-ripple-pandacss && npm publish
-cd create-vike-ripple && npm publish
-```
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for project structure, testing, and publishing guide.
