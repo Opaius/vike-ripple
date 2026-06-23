@@ -1,7 +1,7 @@
-export { useData }
+export { useData };
 
-import { usePageContext } from './usePageContext.js'
+import { usePageContext } from './usePageContext.js';
 
 function useData() {
-  return usePageContext()?.data
+	return usePageContext()?.data;
 }

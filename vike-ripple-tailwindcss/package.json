@@ -1,39 +1,39 @@
 {
-  "name": "vike-ripple-tailwindcss",
-  "version": "0.3.2",
-  "description": "Tailwind CSS v4 integration for Ripple TS — @apply in <style> blocks, class scanning",
-  "type": "module",
-  "main": "./src/index.js",
-  "exports": {
-    ".": {
-      "types": "./index.d.ts",
-      "default": "./src/index.js"
-    }
-  },
-  "bin": {
-    "vike-ripple-tailwindcss": "src/setup.js"
-  },
-  "files": [
-    "src",
-    "index.d.ts"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Opaius/vike-ripple.git"
-  },
-  "homepage": "https://github.com/Opaius/vike-ripple",
-  "bugs": {
-    "url": "https://github.com/Opaius/vike-ripple/issues"
-  },
-  "keywords": [
-    "tailwindcss",
-    "ripple",
-    "ripplets",
-    "vike"
-  ],
-  "license": "MIT",
-  "peerDependencies": {
-    "@tailwindcss/vite": ">=4.0.0",
-    "@ripple-ts/vite-plugin": ">=0.3.0"
-  }
+	"name": "vike-ripple-tailwindcss",
+	"version": "0.3.2",
+	"description": "Tailwind CSS v4 integration for Ripple TS — @apply in <style> blocks, class scanning",
+	"type": "module",
+	"main": "./src/index.js",
+	"exports": {
+		".": {
+			"types": "./index.d.ts",
+			"default": "./src/index.js"
+		}
+	},
+	"bin": {
+		"vike-ripple-tailwindcss": "src/setup.js"
+	},
+	"files": [
+		"src",
+		"index.d.ts"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Opaius/vike-ripple.git"
+	},
+	"homepage": "https://github.com/Opaius/vike-ripple",
+	"bugs": {
+		"url": "https://github.com/Opaius/vike-ripple/issues"
+	},
+	"keywords": [
+		"tailwindcss",
+		"ripple",
+		"ripplets",
+		"vike"
+	],
+	"license": "MIT",
+	"peerDependencies": {
+		"@tailwindcss/vite": ">=4.0.0",
+		"@ripple-ts/vite-plugin": ">=0.3.0"
+	}
 }

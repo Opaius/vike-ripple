@@ -5,72 +5,91 @@
  * Run once:  npx vike-ripple-pandacss setup
  * Or add to project's package.json:  "postinstall": "vike-ripple-pandacss setup"
  */
-import { existsSync, readFileSync, writeFileSync } from 'fs'
-import { createRequire } from 'module'
-import { join } from 'path'
+import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { createRequire } from 'module';
+import { join } from 'path';
 
-const projectRoot = process.cwd()
-let exitCode = 0
+const projectRoot = process.cwd();
+let exitCode = 0;
 
-function log(msg)  { console.log('[vike-ripple-pandacss]', msg) }
-function warn(msg) { console.warn('[vike-ripple-pandacss]', msg) }
+function log(msg) {
+	console.log('[vike-ripple-pandacss]', msg);
+}
+function warn(msg) {
+	console.warn('[vike-ripple-pandacss]', msg);
+}
 
 function patchRippleApply() {
-  const target = resolveModule('@ripple-ts/vite-plugin/src/index.js')
-  if (!target) { warn('@ripple-ts/vite-plugin not found — skipping. Run npm install first.'); return }
+	const target = resolveModule('@ripple-ts/vite-plugin/src/index.js');
+	if (!target) {
+		warn('@ripple-ts/vite-plugin not found — skipping. Run npm install first.');
+		return;
+	}
 
-  let src = readFileSync(target, 'utf-8')
-  if (src.includes('PANDA_PATCH_APPLY')) { log('@apply patch already applied'); return }
+	let src = readFileSync(target, 'utf-8');
+	if (src.includes('PANDA_PATCH_APPLY')) {
+		log('@apply patch already applied');
+		return;
+	}
 
-  // Case 1: vike-ripple's tailwind patch is already present — replace it
-  if (src.includes('TW_PATCH_APPLY') || src.includes('@import "tailwindcss"')) {
-    const twPatched = (
-      '\t\t\t\t\t\t// TW_PATCH_APPLY: @apply support\n' +
-      '\t\t\t\t\t\tcss = \'@import "tailwindcss" layer(reference);\\n\' + css;\n' +
-      '\t\t\t\t\t\tconst cssId = createVirtualImportId(filename, root, \'style\');\n' +
-      '\t\t\t\t\t\tcssCache.set(cssId, css);'
-    )
-    const pandaPatched = (
-      '\t\t\t\t\t\t// PANDA_PATCH_APPLY: bring panda CSS layer into scope for @apply\n' +
-      "\t\t\t\t\t\tcss = '@layer reset, base, tokens, recipes, utilities;\\n' + css;\n" +
-      '\t\t\t\t\t\tconst cssId = createVirtualImportId(filename, root, \'style\');\n' +
-      '\t\t\t\t\t\tcssCache.set(cssId, css);'
-    )
-    const result = src.replace(twPatched, pandaPatched)
-    if (result === src) { warn('Could not replace tailwind patch with Panda patch'); exitCode = 1; return }
-    writeFileSync(target, result, 'utf-8')
-    log('Replaced tailwind @apply patch with Panda CSS @apply patch')
-    return
-  }
+	// Case 1: vike-ripple's tailwind patch is already present — replace it
+	if (src.includes('TW_PATCH_APPLY') || src.includes('@import "tailwindcss"')) {
+		const twPatched =
+			'\t\t\t\t\t\t// TW_PATCH_APPLY: @apply support\n' +
+			'\t\t\t\t\t\tcss = \'@import "tailwindcss" layer(reference);\\n\' + css;\n' +
+			"\t\t\t\t\t\tconst cssId = createVirtualImportId(filename, root, 'style');\n" +
+			'\t\t\t\t\t\tcssCache.set(cssId, css);';
+		const pandaPatched =
+			'\t\t\t\t\t\t// PANDA_PATCH_APPLY: bring panda CSS layer into scope for @apply\n' +
+			"\t\t\t\t\t\tcss = '@layer reset, base, tokens, recipes, utilities;\\n' + css;\n" +
+			"\t\t\t\t\t\tconst cssId = createVirtualImportId(filename, root, 'style');\n" +
+			'\t\t\t\t\t\tcssCache.set(cssId, css);';
+		const result = src.replace(twPatched, pandaPatched);
+		if (result === src) {
+			warn('Could not replace tailwind patch with Panda patch');
+			exitCode = 1;
+			return;
+		}
+		writeFileSync(target, result, 'utf-8');
+		log('Replaced tailwind @apply patch with Panda CSS @apply patch');
+		return;
+	}
 
-  // Case 2: fresh install, no tailwind patch — apply panda directly
-  const orig = (
-    '\t\t\t\t\tif (css) {\n' +
-    '\t\t\t\t\t\tconst cssId = createVirtualImportId(filename, root, \'style\');\n' +
-    '\t\t\t\t\t\tcssCache.set(cssId, css);'
-  )
-  const patched = (
-    '\t\t\t\t\tif (css) {\n' +
-    '\t\t\t\t\t\t// PANDA_PATCH_APPLY: bring panda CSS layer into scope for @apply\n' +
-    "\t\t\t\t\t\tcss = '@layer reset, base, tokens, recipes, utilities;\\n' + css;\n" +
-    '\t\t\t\t\t\tconst cssId = createVirtualImportId(filename, root, \'style\');\n' +
-    '\t\t\t\t\t\tcssCache.set(cssId, css);'
-  )
+	// Case 2: fresh install, no tailwind patch — apply panda directly
+	const orig =
+		'\t\t\t\t\tif (css) {\n' +
+		"\t\t\t\t\t\tconst cssId = createVirtualImportId(filename, root, 'style');\n" +
+		'\t\t\t\t\t\tcssCache.set(cssId, css);';
+	const patched =
+		'\t\t\t\t\tif (css) {\n' +
+		'\t\t\t\t\t\t// PANDA_PATCH_APPLY: bring panda CSS layer into scope for @apply\n' +
+		"\t\t\t\t\t\tcss = '@layer reset, base, tokens, recipes, utilities;\\n' + css;\n" +
+		"\t\t\t\t\t\tconst cssId = createVirtualImportId(filename, root, 'style');\n" +
+		'\t\t\t\t\t\tcssCache.set(cssId, css);';
 
-  const result = src.replace(orig, patched)
-  if (result === src) { warn('Could not find target in Ripple plugin'); exitCode = 1; return }
+	const result = src.replace(orig, patched);
+	if (result === src) {
+		warn('Could not find target in Ripple plugin');
+		exitCode = 1;
+		return;
+	}
 
-  writeFileSync(target, result, 'utf-8')
-  log('Patched Ripple plugin for Panda CSS @apply support in <style> blocks')
+	writeFileSync(target, result, 'utf-8');
+	log('Patched Ripple plugin for Panda CSS @apply support in <style> blocks');
 }
 
 function resolveModule(rel) {
-  const p = join(projectRoot, 'node_modules', rel)
-  if (existsSync(p)) return p
-  try { const r = createRequire(join(projectRoot, 'package.json')); return r.resolve(rel) } catch { return null }
+	const p = join(projectRoot, 'node_modules', rel);
+	if (existsSync(p)) return p;
+	try {
+		const r = createRequire(join(projectRoot, 'package.json'));
+		return r.resolve(rel);
+	} catch {
+		return null;
+	}
 }
 
-log('Applying Panda CSS @apply patch...')
-patchRippleApply()
-log('Done')
-process.exit(exitCode)
+log('Applying Panda CSS @apply patch...');
+patchRippleApply();
+log('Done');
+process.exit(exitCode);

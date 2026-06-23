@@ -28,11 +28,11 @@
  *   })
  */
 
-export { pluginRipple } from './panda-plugin.js'
+export { pluginRipple } from './panda-plugin.js';
 
 export default function vikeRipplePandacss() {
-  return {
-    name: 'vike-ripple-pandacss',
-    enforce: 'pre',
-  }
+	return {
+		name: 'vike-ripple-pandacss',
+		enforce: 'pre'
+	};
 }

@@ -1,7 +1,7 @@
-export { ClientOnly }
+export { ClientOnly };
 
-import { useHydrated } from '../hooks/useHydrated.js'
+import { useHydrated } from '../hooks/useHydrated.js';
 
 function ClientOnly({ children, fallback }) {
-  return useHydrated() ? children : (fallback ?? null)
+	return useHydrated() ? children : (fallback ?? null);
 }

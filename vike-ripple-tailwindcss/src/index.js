@@ -12,8 +12,8 @@
  *   // in plugins: vikeRippleTailwindcss(),
  */
 export default function vikeRippleTailwindcss() {
-  return {
-    name: 'vike-ripple-tailwindcss',
-    enforce: 'pre',
-  }
+	return {
+		name: 'vike-ripple-tailwindcss',
+		enforce: 'pre'
+	};
 }

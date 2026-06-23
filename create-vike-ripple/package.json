@@ -1,32 +1,32 @@
 {
-  "name": "create-vike-ripple",
-  "version": "0.2.3",
-  "description": "Scaffold a Vike + Ripple TS project with Tailwind CSS, Panda CSS, Cloudflare Workers, and Remult",
-  "type": "module",
-  "bin": {
-    "create-vike-ripple": "src/index.js"
-  },
-  "files": [
-    "src"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Opaius/vike-ripple.git"
-  },
-  "homepage": "https://github.com/Opaius/vike-ripple",
-  "bugs": {
-    "url": "https://github.com/Opaius/vike-ripple/issues"
-  },
-  "keywords": [
-    "vike",
-    "ripple",
-    "ripplets",
-    "vite",
-    "scaffold",
-    "tailwindcss",
-    "pandacss",
-    "cloudflare",
-    "remult"
-  ],
-  "license": "MIT"
+	"name": "create-vike-ripple",
+	"version": "0.2.3",
+	"description": "Scaffold a Vike + Ripple TS project with Tailwind CSS, Panda CSS, Cloudflare Workers, and Remult",
+	"type": "module",
+	"bin": {
+		"create-vike-ripple": "src/index.js"
+	},
+	"files": [
+		"src"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Opaius/vike-ripple.git"
+	},
+	"homepage": "https://github.com/Opaius/vike-ripple",
+	"bugs": {
+		"url": "https://github.com/Opaius/vike-ripple/issues"
+	},
+	"keywords": [
+		"vike",
+		"ripple",
+		"ripplets",
+		"vite",
+		"scaffold",
+		"tailwindcss",
+		"pandacss",
+		"cloudflare",
+		"remult"
+	],
+	"license": "MIT"
 }
