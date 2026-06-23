@@ -99,12 +99,13 @@ if (remult && cloudflare) {
   writeFileSync(join(root, 'wrangler.jsonc'), JSON.stringify({ $schema: 'node_modules/wrangler/config-schema.json', name, main: '+server.ts', compatibility_date: '2026-06-01', compatibility_flags: ['nodejs_compat'], d1_databases: [{ binding: 'DB', database_name: name, database_id: 'your-database-id-here' }], durable_objects: { bindings: [{ name: 'REMULT_ROOM', class_name: 'RemultPubSubRoom' }, { name: 'REMULT_LIVE_QUERY_STORAGE', class_name: 'RemultLiveQueryStorageRoom' }] }, migrations: [{ tag: 'v1', new_sqlite_classes: ['RemultPubSubRoom', 'RemultLiveQueryStorageRoom'] }], vars: { BETTER_AUTH_URL: 'http://localhost:3000', BETTER_AUTH_SECRET: 'dev-secret-change-in-production!!', MAX_CONNECTIONS_PER_SHARD: '100', REALTIME_LIVE_QUERY_ROOM_MODE: 'global' } }, null, 2) + '\n')
 
   writeFileSync(join(root, '+server.ts'), [
-    `import { RemultLiveQueryStorageRoom, RemultPartyRoom } from 'remult-partykit/durable-object'`,
+    `import { RemultLiveQueryStorageRoom, RemultPartyRoom, resolveRoomIdFromChannel } from 'remult-partykit/durable-object'`,
     `import { app } from './server/hono'`,
     ``,
     `class PubSubRoom extends RemultPartyRoom<Cloudflare.Env> {`,
     `  static options = { hibernate: false }`,
-    `  override async onError(_connection: import('partyserver').Connection, error: unknown) {`,
+    `    override options = { resolveRoomId: resolveRoomIdFromChannel };
+  override async onError(_connection: import('partyserver').Connection, error: unknown) {`,
     `    console.error('PubSubRoom error:', error)`,
     `  }`,
     `}`,
