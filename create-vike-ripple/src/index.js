@@ -7,10 +7,20 @@ import { execSync } from 'child_process'
 const args = process.argv.slice(2)
 let name = null
 let style = 'tailwind' // tailwind | pandacss | none
+let cloudflare = false
+let remult = false
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--style' && args[i + 1]) {
     style = args[++i]
+    continue
+  }
+  if (args[i] === '--cloudflare') {
+    cloudflare = true
+    continue
+  }
+  if (args[i] === '--remult') {
+    remult = true
     continue
   }
   if (!args[i].startsWith('--') && !name) name = args[i]
@@ -41,16 +51,32 @@ if (style === 'tailwind') {
   deps['vike-ripple-tailwindcss'] = 'latest'
   deps['@tailwindcss/vite'] = 'latest'
 }
-
 if (style === 'pandacss') {
   deps['vike-ripple-pandacss'] = 'latest'
   deps['@pandacss/dev'] = 'latest'
+}
+if (cloudflare) {
+  devDeps['@cloudflare/vite-plugin'] = 'latest'
+  devDeps['@cloudflare/workers-types'] = 'latest'
+  devDeps.wrangler = 'latest'
+}
+if (remult) {
+  deps.remult = 'latest'
+  if (cloudflare) {
+    deps['remult-partykit'] = 'latest'
+    deps.partyserver = '^0.5.0'
+    deps.hono = 'latest'
+    deps['@vikejs/hono'] = 'latest'
+  }
 }
 
 const scripts = { dev: 'vite', build: 'vite build', preview: 'vite preview' }
 if (style === 'pandacss') {
   scripts.codegen = 'panda codegen'
   scripts.prepare = 'panda codegen'
+}
+if (cloudflare) {
+  scripts.types = 'wrangler types --env-interface Env worker-configuration.d.ts'
 }
 
 writeFileSync(join(root, 'package.json'), JSON.stringify({
@@ -63,39 +89,39 @@ writeFileSync(join(root, 'package.json'), JSON.stringify({
 }, null, 2) + '\n')
 
 // --- vite.config.ts ---
-const plugins = [
-  `    vike(),`,
-  `    vikeRipple(),`,
-  `    ripple({ excludeRippleExternalModules: true }),`,
-]
-const imports = [
+const plugins = []
+const imports = []
+if (cloudflare) {
+  plugins.push(`    cloudflare({ viteEnvironment: { name: 'ssr' } }),`)
+  imports.push(`import { cloudflare } from '@cloudflare/vite-plugin'`)
+}
+plugins.push(`    vike(),`)
+plugins.push(`    vikeRipple(),`)
+plugins.push(`    ripple({ excludeRippleExternalModules: true }),`)
+imports.push(
   `import { defineConfig } from 'vite'`,
   `import vike from 'vike/plugin'`,
   `import { ripple } from '@ripple-ts/vite-plugin'`,
   `import vikeRipple from 'vike-ripple'`,
-]
+)
 
 if (style === 'tailwind') {
   imports.push(
     `import vikeRippleTailwindcss from 'vike-ripple-tailwindcss'`,
     `import tailwindcss from '@tailwindcss/vite'`,
   )
-  plugins.push(
-    `    vikeRippleTailwindcss(),`,
-    `    tailwindcss(),`,
-  )
+  plugins.push(`    vikeRippleTailwindcss(),`, `    tailwindcss(),`)
 }
-
 if (style === 'pandacss') {
-  imports.push(
-    `import vikeRipplePandacss from 'vike-ripple-pandacss'`,
-  )
+  imports.push(`import vikeRipplePandacss from 'vike-ripple-pandacss'`)
+  plugins.push(`    vikeRipplePandacss(),`)
 }
 
 writeFileSync(join(root, 'vite.config.ts'), [
   ...imports,
   ``,
   `export default defineConfig({`,
+  ...(cloudflare ? [`  environments: { ssr: { consumer: 'server' } },`] : []),
   `  optimizeDeps: { exclude: ['ripple'] },`,
   ...(style === 'pandacss' ? [`  css: { postcss: './postcss.config.js' },`] : []),
   `  plugins: [`,
@@ -108,15 +134,21 @@ writeFileSync(join(root, 'vite.config.ts'), [
 // --- tsconfig.json ---
 writeFileSync(join(root, 'tsconfig.json'), JSON.stringify({
   compilerOptions: {
-    target: 'ES2022',
+    strict: true,
     module: 'ESNext',
     moduleResolution: 'bundler',
+    target: 'ESNext',
     jsx: 'preserve',
     jsxImportSource: 'ripple',
-    strict: true,
-    noEmit: true,
+    esModuleInterop: true,
     isolatedModules: true,
+    verbatimModuleSyntax: true,
     skipLibCheck: true,
+    ...(cloudflare ? { types: ['@cloudflare/workers-types'] } : { types: ['vike/client'] }),
+    paths: {
+      '@/*': ['./*'],
+      ...(style === 'pandacss' ? { '@styled-system/*': ['./styled-system/*'] } : {}),
+    },
   },
   include: ['**/*.ts', '**/*.tsx', '**/*.tsrx'],
 }, null, 2) + '\n')
@@ -125,6 +157,7 @@ writeFileSync(join(root, 'tsconfig.json'), JSON.stringify({
 writeFileSync(join(root, 'renderer', '+config.ts'), [
   `export default {`,
   `  extends: ['import:vike-ripple/config:default'],`,
+  `  server: true,`,
   `}`,
   ``,
 ].join('\n'))
@@ -147,14 +180,13 @@ writeFileSync(join(root, 'pages', '+Layout.tsrx'), [
   ``,
 ].join('\n'))
 
-const pageImport = style !== 'none' && style !== 'pandacss' ? `import '../../tailwind.css'` : null
+const pageImport = style === 'tailwind' ? `import '../../tailwind.css'` : null
 writeFileSync(join(root, 'pages', 'index', '+Page.tsrx'), [
   ...(pageImport ? [pageImport, ``] : []),
   `export function Page() @{`,
   `  <>`,
   `    <head>`,
   `      <title>Home</title>`,
-  ...(style === 'pandacss' ? [`      <link rel="stylesheet" href="/styled-system/styles.css" />`] : []),
   `    </head>`,
   `    <section${style === 'none' ? '' : ' class="min-h-screen flex flex-col items-center justify-center gap-4 p-8"'}>`,
   `      <h1${style === 'none' ? '' : ' class="text-4xl font-bold"'}>Hello, Vike + Ripple!</h1>`,
@@ -165,7 +197,6 @@ writeFileSync(join(root, 'pages', 'index', '+Page.tsrx'), [
   ``,
 ].join('\n'))
 
-// --- style entry point ---
 // --- pages/about/+Page.tsrx ---
 mkdirSync(join(root, 'pages', 'about'), { recursive: true })
 writeFileSync(join(root, 'pages', 'about', '+Page.tsrx'), [
@@ -173,7 +204,6 @@ writeFileSync(join(root, 'pages', 'about', '+Page.tsrx'), [
   `  <>`,
   `    <head>`,
   `      <title>About</title>`,
-  ...(style === 'pandacss' ? [`      <link rel="stylesheet" href="/styled-system/styles.css" />`] : []),
   `    </head>`,
   `    <section class="${style === 'none' ? '' : 'mx-auto max-w-2xl p-8'}">`,
   `      <h1 class="${style === 'none' ? '' : 'text-3xl font-bold mb-4'}">About</h1>`,
@@ -184,13 +214,13 @@ writeFileSync(join(root, 'pages', 'about', '+Page.tsrx'), [
   `}`,
   ``,
 ].join('\n'))
+
 if (style === 'tailwind') {
   writeFileSync(join(root, 'tailwind.css'), [
     `@import "tailwindcss";`,
     ``,
   ].join('\n'))
 }
-// ponytail: --style pandacss wiring is a stub; replace with real vike-ripple-pandacss plugin when available
 // ponytail: --style pandacss wiring with vike-ripple-pandacss plugin
 if (style === 'pandacss') {
   writeFileSync(join(root, 'panda.config.ts'), [
@@ -202,25 +232,187 @@ if (style === 'pandacss') {
     `  include: ['./pages/**/*.{tsrx,tsx}', './renderer/**/*.{ts,tsx}'],`,
     `  exclude: [],`,
     `  plugins: [pluginRipple()],`,
-    `  theme: {`,
-    `    extend: {},`,
-    `  },`,
+    `  theme: { extend: {} },`,
     `  outdir: 'styled-system',`,
     `})`,
     ``,
   ].join('\n'))
   writeFileSync(join(root, 'postcss.config.js'), [
-    `export default {`,
-    `  plugins: {`,
-    `    '@pandacss/dev/postcss': {},`,
+    `export default { plugins: { '@pandacss/dev/postcss': {} } }`,
+    ``,
+  ].join('\n'))
+}
+
+// --- Cloudflare files ---
+if (cloudflare) {
+  mkdirSync(join(root, '.wrangler'), { recursive: true })
+
+  writeFileSync(join(root, 'wrangler.jsonc'), JSON.stringify({
+    $schema: 'node_modules/wrangler/config-schema.json',
+    name,
+    main: 'vike:server-entry',
+    compatibility_date: '2026-06-01',
+    compatibility_flags: ['nodejs_compat'],
+  }, null, 2) + '\n')
+
+  writeFileSync(join(root, '.gitignore'), [
+    `node_modules/`,
+    `dist/`,
+    `.wrangler/`,
+    `*.log`,
+    `.env`,
+  ].join('\n'))
+}
+
+// --- Remult + Cloudflare files ---
+if (remult && cloudflare) {
+  mkdirSync(join(root, 'server'), { recursive: true })
+  mkdirSync(join(root, 'lib'), { recursive: true })
+
+  const projectName = name
+  writeFileSync(join(root, 'wrangler.jsonc'), JSON.stringify({
+    $schema: 'node_modules/wrangler/config-schema.json',
+    name: projectName,
+    main: '+server.ts',
+    compatibility_date: '2026-06-01',
+    compatibility_flags: ['nodejs_compat'],
+    d1_databases: [
+      { binding: 'DB', database_name: projectName, database_id: 'your-database-id-here' },
+    ],
+    durable_objects: {
+      bindings: [
+        { name: 'REMULT_ROOM', class_name: 'RemultPubSubRoom' },
+        { name: 'REMULT_LIVE_QUERY_STORAGE', class_name: 'RemultLiveQueryStorageRoom' },
+      ],
+    },
+    migrations: [
+      { tag: 'v1', new_sqlite_classes: ['RemultPubSubRoom', 'RemultLiveQueryStorageRoom'] },
+    ],
+    vars: {
+      BETTER_AUTH_URL: 'http://localhost:3000',
+      BETTER_AUTH_SECRET: 'dev-secret-change-in-production!!',
+      MAX_CONNECTIONS_PER_SHARD: '100',
+      REALTIME_LIVE_QUERY_ROOM_MODE: 'global',
+    },
+  }, null, 2) + '\n')
+
+  writeFileSync(join(root, '+server.ts'), [
+    `import { RemultLiveQueryStorageRoom, RemultPartyRoom, resolveRoomIdFromChannel } from 'remult-partykit/durable-object'`,
+    `import { app } from './server/hono'`,
+    ``,
+    `class PubSubRoom extends RemultPartyRoom<Cloudflare.Env> {`,
+    `  static options = { hibernate: false }`,
+    `  override options = { resolveRoomId: resolveRoomIdFromChannel }`,
+    `  override async onError(_connection: import('partyserver').Connection, error: unknown) {`,
+    `    console.error('PubSubRoom error:', error)`,
+    `  }`,
+    `}`,
+    ``,
+    `export default { fetch: app.fetch }`,
+    `export { RemultLiveQueryStorageRoom, PubSubRoom as RemultPubSubRoom }`,
+    ``,
+  ].join('\n'))
+
+  writeFileSync(join(root, 'server', 'hono.ts'), [
+    `import { Hono } from 'hono'`,
+    `import { remultApi } from 'remult/hono'`,
+    `import { RemultPartySubscriptionServer } from 'remult-partykit/server'`,
+    `import { SmartD1Client } from 'remult-partykit'`,
+    `import { D1DataProvider } from 'remult/remult-d1'`,
+    `import { renderPage } from 'vike/server'`,
+    `import { createMiddleware } from '@vikejs/hono'`,
+    ``,
+    `const app = new Hono()`,
+    ``,
+    `app.use('/api/*', remultApi({`,
+    `  dataProvider: async () => {`,
+    `    const env = process.env as unknown as Cloudflare.Env`,
+    `    return new D1DataProvider(env.DB)`,
     `  },`,
+    `  subscriptionServer: () => new RemultPartySubscriptionServer(),`,
+    `  buildEntities: () => [],`,
+    `  getUser: () => undefined,`,
+    `}))`,
+    ``,
+    `app.use('/party/*', async (c) => {`,
+    `  const env = c.env as Cloudflare.Env`,
+    `  return env.REMULT_ROOM.fetch(c.req.raw)`,
+    `})`,
+    ``,
+    `app.use(createMiddleware({}))`,
+    `app.get('*', async (c) => {`,
+    `  const pageContext = await renderPage({ urlOriginal: c.req.url })`,
+    `  const { httpResponse } = pageContext`,
+    `  if (!httpResponse) return c.text('Page not found', 404)`,
+    `  const { body, statusCode, headers } = httpResponse`,
+    `  headers.forEach(([name, value]) => c.header(name, value))`,
+    `  return c.body(body, statusCode)`,
+    `})`,
+    ``,
+    `export { app }`,
+    ``,
+  ].join('\n'))
+
+  writeFileSync(join(root, 'lib', 'remult-client.ts'), [
+    `import { RemultPartySubscriptionClient } from 'remult-partykit'`,
+    `import { remult } from 'remult'`,
+    ``,
+    `export function initRemultRealtime(host: string) {`,
+    `  const client = new RemultPartySubscriptionClient({`,
+    `    getSocketUrl: (roomName: string) => {`,
+    `      const wsHost = host.replace(/^http/, 'ws')`,
+    `      return \`\${wsHost}/party/remult?room=\${roomName}\``,
+    `    },`,
+    `  })`,
+    `  remult.apiClient.subscriptionClient = client`,
+    `}`,
+    ``,
+  ].join('\n'))
+
+  writeFileSync(join(root, 'worker-configuration.d.ts'), [
+    `// Generated by \`npm run types\`.`,
+    `// Regenerate after changing wrangler.jsonc:`,
+    `//   npm run types`,
+    `interface Env {`,
+    `  DB: D1Database;`,
+    `  REMULT_ROOM: DurableObjectNamespace;`,
+    `  REMULT_LIVE_QUERY_STORAGE: DurableObjectNamespace;`,
+    `  BETTER_AUTH_URL: string;`,
+    `  BETTER_AUTH_SECRET: string;`,
+    `  MAX_CONNECTIONS_PER_SHARD: string;`,
+    `  REALTIME_LIVE_QUERY_ROOM_MODE: string;`,
     `}`,
     ``,
   ].join('\n'))
 }
 
+// --- Remult (non-CF) files ---
+if (remult && !cloudflare) {
+  mkdirSync(join(root, 'server'), { recursive: true })
+
+  writeFileSync(join(root, 'server', 'remult.ts'), [
+    `import { remult } from 'remult'`,
+    ``,
+    `// Your entities here`,
+    `// export class Task {`,
+    `//   id = 0;`,
+    `//   title = '';`,
+    `//   completed = false;`,
+    `// }`,
+    ``,
+    `export const api = remult({`,
+    `  entities: [],`,
+    `  getUser: async () => undefined,`,
+    `})`,
+    ``,
+  ].join('\n'))
+}
+
 // --- install ---
-console.log(`\n  \x1b[1mCreated ${name}  (style: ${style})\x1b[22m`)
+let label = `style: ${style}`
+if (cloudflare) label += ', CF Workers'
+if (remult) label += ', Remult'
+console.log(`\n  \x1b[1mCreated ${name}  (${label})\x1b[22m`)
 console.log(`  cd ${name}`)
 
 console.log(`\n  Installing dependencies...`)
@@ -233,10 +425,13 @@ if (style === 'tailwind') {
   console.log(`\n  Running vike-ripple-tailwindcss setup...`)
   execSync('npx --yes vike-ripple-tailwindcss setup', { cwd: root, stdio: 'inherit' })
 }
-
 if (style === 'pandacss') {
   console.log(`\n  Running vike-ripple-pandacss setup...`)
   execSync('npx --yes vike-ripple-pandacss setup', { cwd: root, stdio: 'inherit' })
+}
+if (cloudflare) {
+  console.log(`\n  Generating worker types...`)
+  execSync('npm run types', { cwd: root, stdio: 'inherit' })
 }
 
 console.log(`\n  \x1b[1mDone!\x1b[22m`)
