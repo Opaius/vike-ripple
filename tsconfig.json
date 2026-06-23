@@ -11,9 +11,20 @@
 	},
 	"include": [],
 	"references": [
-		{ "path": "vike-ripple" },
-		{ "path": "vike-ripple-tailwindcss" },
-		{ "path": "vike-ripple-pandacss" },
-		{ "path": "create-vike-ripple" }
+		{
+			"path": "vike-ripple"
+		},
+		{
+			"path": "vike-ripple-tailwindcss"
+		},
+		{
+			"path": "vike-ripple-pandacss"
+		},
+		{
+			"path": "create-vike-ripple"
+		},
+		{
+			"path": "ripple-transitions"
+		}
 	]
 }

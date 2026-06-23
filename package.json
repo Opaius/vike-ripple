@@ -11,6 +11,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.0",
+		"@tsrx/ripple": "^0.1.33",
 		"@tsrx/typescript-plugin": "^0.3.85",
 		"typescript": "^6.0.3"
 	}

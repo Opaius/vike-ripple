@@ -9,7 +9,13 @@
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
 		"allowJs": true,
-		"checkJs": false
+		"checkJs": false,
+		"include": [
+			"src/**/*",
+			"**/*.tsrx"
+		]
 	},
-	"include": ["src/**/*"]
+	"include": [
+		"src/**/*"
+	]
 }
