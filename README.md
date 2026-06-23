@@ -6,7 +6,9 @@ Monorepo for [Vike](https://vike.dev) + [Ripple TS](https://ripple-ts.com) integ
 
 ## Packages
 
-| Package | npm | Description |
+Each package has its own `README.md` with full install, setup, and usage instructions.
+
+| Package | npm | What it does |
 |---------|-----|-------------|
 | [`vike-ripple`](./vike-ripple) | [![npm](https://img.shields.io/npm/v/vike-ripple)](https://www.npmjs.com/package/vike-ripple) | Core: SSR, CSR, streaming, head management, `.tsrx` support, hooks |
 | [`vike-ripple-tailwindcss`](./vike-ripple-tailwindcss) | [![npm](https://img.shields.io/npm/v/vike-ripple-tailwindcss)](https://www.npmjs.com/package/vike-ripple-tailwindcss) | Tailwind CSS v4 integration with `@apply` in `<style>` blocks |
@@ -33,6 +35,13 @@ Vike doesn't know about `.tsrx` files, Ripple's Vite plugin has a cache-miss bug
 
 These packages fix all three issues with minimal, automatic patches applied during `npx <package> setup`.
 
-## Contributing
+## Reference
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for project structure, testing, and publishing guide.
+| Document | What's in it |
+|----------|-------------|
+| [`vike-ripple/docs/quirks.md`](./vike-ripple/docs/quirks.md) | Every bug, fix, caveat, and workaround discovered during development |
+| [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Project structure, how to make changes, testing, publishing |
+| [`vike-ripple/README.md`](./vike-ripple) | Core package install & setup |
+| [`vike-ripple-tailwindcss/README.md`](./vike-ripple-tailwindcss) | Tailwind CSS integration docs |
+| [`vike-ripple-pandacss/README.md`](./vike-ripple-pandacss) | Panda CSS integration docs |
+| [`create-vike-ripple/README.md`](./create-vike-ripple) | Scaffold generator docs |
