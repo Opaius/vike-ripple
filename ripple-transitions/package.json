@@ -1,0 +1,31 @@
+{
+  "name": "ripple-transitions",
+  "version": "0.1.0",
+  "description": "Transition and animation library for the Ripple framework",
+  "type": "module",
+  "main": "./src/index.tsrx",
+  "types": "./src/index.tsrx",
+  "exports": {
+    ".": {
+      "types": "./src/index.tsrx",
+      "default": "./src/index.tsrx"
+    }
+  },
+  "files": [
+    "src",
+    "README.md",
+    "package.json"
+  ],
+  "peerDependencies": {
+    "ripple": ">=0.3.0"
+  },
+  "keywords": [
+    "ripple",
+    "transitions",
+    "animation",
+    "ripple-transitions",
+    "svelte-transitions"
+  ],
+  "license": "MIT",
+  "author": "Antigravity <antigravity@google.com>"
+}

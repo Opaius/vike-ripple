@@ -1,0 +1,18 @@
+{
+	"compilerOptions": {
+		"strict": true,
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"target": "ESNext",
+		"noEmit": true,
+		"skipLibCheck": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"jsx": "preserve",
+		"jsxImportSource": "ripple",
+		"allowJs": true,
+		"checkJs": false,
+		"plugins": [{ "name": "@tsrx/typescript-plugin" }]
+	},
+	"include": ["src/**/*", "**/*.tsrx"]
+}
