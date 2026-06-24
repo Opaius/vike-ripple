@@ -16,6 +16,7 @@ Options:
   --style <name>    CSS framework: tailwind (default), pandacss, none
   --cloudflare      Add Cloudflare Workers configuration
   --remult          Add Remult ORM (DO-based realtime with CF, SSE without)
+  --betterauth      Add Better Auth (requires --remult)
   --help, -h        Show this help message
 
 Examples:
@@ -32,17 +33,23 @@ let name = null;
 let style = 'tailwind';
 let cloudflare = false;
 let remult = false;
+let betterauth = false;
 
 for (let i = 0; i < args.length; i++) {
 	if (args[i] === '--style' && args[i + 1]) { style = args[++i]; continue; }
 	if (args[i] === '--cloudflare') { cloudflare = true; continue; }
 	if (args[i] === '--remult') { remult = true; continue; }
+	if (args[i] === '--betterauth') { betterauth = true; continue; }
 	if (!args[i].startsWith('--') && !name) name = args[i];
 }
 if (!name && args.length && !args[0].startsWith('--')) name = args[0];
 if (!name) name = 'my-vike-app';
 if (!['tailwind', 'pandacss', 'none'].includes(style)) {
 	console.error(`Unknown style "${style}". Use tailwind, pandacss, or none.`);
+	process.exit(1);
+}
+if (betterauth && !remult) {
+	console.error('--betterauth requires --remult.');
 	process.exit(1);
 }
 
@@ -81,7 +88,11 @@ if (remult) {
 		deps['@vikejs/hono'] = 'latest';
 	}
 }
-const scripts = { dev: 'vite', build: 'vite build', preview: 'vite preview', postinstall: 'ln -sf .. node_modules/@' };
+if (betterauth) {
+	deps['better-auth'] = 'latest';
+	deps['@nerdfolio/remult-better-auth'] = 'latest';
+}
+const scripts = { dev: 'vite', build: 'vite build', preview: 'vite preview', postinstall: 'rm -f node_modules/~ && ln -sf .. node_modules/~' };
 if (style === 'pandacss') {
 	scripts.codegen = 'panda codegen';
 	scripts.prepare = 'panda codegen';
@@ -130,20 +141,21 @@ writeFileSync(join(root, 'vite.config.ts'), [
 	...viteImports, ``,
 	`const __dirname = dirname(fileURLToPath(import.meta.url))`,
 	`export default defineConfig({`,
-	`  resolve: { alias: { '@': __dirname } },`,
+	`  resolve: { alias: { '~': __dirname } },`,
 	...vitExtras,
 	`  optimizeDeps: { exclude: ['ripple'] },`,
 	`  plugins: [`, ...vitePlugins, `  ],`, `})`, ``
 ].join('\n'));
 
 // --- tsconfig.json ---
-const tsPaths = { '@/*': ['./*'] };
-if (style === 'pandacss') tsPaths['@styled-system/*'] = ['./styled-system/*'];
+const tsPaths = { '~/*': ['./*'] };
+if (style === 'pandacss') tsPaths['~styled-system/*'] = ['./styled-system/*'];
 writeFileSync(join(root, 'tsconfig.json'), JSON.stringify({
 	compilerOptions: {
 		strict: true, module: 'ESNext', moduleResolution: 'bundler',
 		target: 'ESNext', jsx: 'preserve', jsxImportSource: 'ripple',
 		esModuleInterop: true, isolatedModules: true,
+		experimentalDecorators: true,
 		verbatimModuleSyntax: true, skipLibCheck: true,
 		...(cloudflare ? { types: ['@cloudflare/workers-types'] } : { types: ['vike/client'] }),
 		paths: tsPaths
@@ -163,8 +175,8 @@ writeFileSync(join(root, 'renderer', '+config.ts'), [
 if (style === 'pandacss') {
 	writeFileSync(join(root, 'pages', '+Layout.tsrx'), [
 		`import { type JSX } from 'ripple'`,
-		`import { css } from '@/styled-system/css'`,
-		`import '@/src/styles.css'`,
+		`import { css } from '~/styled-system/css'`,
+		`import '~/src/styles.css'`,
 		``,
 		`export function Layout({ children }: { children: JSX.Element }) @{`,
 		`  <div class={css({ minH: 'screen', bg: 'white', color: 'gray.900' })}>`,
@@ -200,7 +212,7 @@ if (style === 'pandacss') {
 // --- pages/index/+Page.tsrx ---
 if (style === 'pandacss') {
 	writeFileSync(join(root, 'pages', 'index', '+Page.tsrx'), [
-		`import { css } from '@/styled-system/css'`, ``,
+		`import { css } from '~/styled-system/css'`, ``,
 		`export function Page() @{`,
 		`  <>`,
 		`    <head><title>Home</title></head>`,
@@ -239,7 +251,7 @@ if (style === 'pandacss') {
 mkdirSync(join(root, 'pages', 'about'), { recursive: true });
 if (style === 'pandacss') {
 	writeFileSync(join(root, 'pages', 'about', '+Page.tsrx'), [
-		`import { css } from '@/styled-system/css'`, ``,
+		`import { css } from '~/styled-system/css'`, ``,
 		`export function Page() @{`,
 		`  <>`,
 		`    <head><title>About</title></head>`,
@@ -348,29 +360,62 @@ if (remult && cloudflare) {
 		`export default { fetch: app.fetch }`,
 		`export { RemultLiveQueryStorageRoom, PubSubRoom as RemultPubSubRoom }`, ``
 	].join('\n'));
-	writeFileSync(join(root, 'server', 'hono.ts'), [
+	const honoImports = [
 		`import { Hono } from 'hono'`,
 		`import { D1DataProvider } from 'remult/remult-d1'`,
 		`import { remultApi } from 'remult/remult-hono'`,
 		`import { RemultPartySubscriptionServer } from 'remult-partykit/server'`,
-		`import vike from '@vikejs/hono'`, ``,
+		`import vike from '@vikejs/hono'`,
+	]
+	if (betterauth) {
+		honoImports.push(
+			`import { betterAuth } from 'better-auth'`,
+			`import { getAuthConfig } from './better-auth'`,
+		)
+	}
+	let honoBody = [
+		``,
 		`const app = new Hono()`,
+	]
+	if (betterauth) {
+		honoBody.push(
+			`const env = process.env as unknown as Cloudflare.Env`,
+		)
+	}
+	honoBody.push(
 		`app.use('/api/*', remultApi({`,
 		`  dataProvider: async () => {`,
-		`    const env = process.env as unknown as Cloudflare.Env`,
-		`    return new D1DataProvider(env.DB)`,
+	)
+	if (betterauth) {
+		honoBody.push(`    return new D1DataProvider(env.DB)`)
+	} else {
+		honoBody.push(
+			`    const env = process.env as unknown as Cloudflare.Env`,
+			`    return new D1DataProvider(env.DB)`,
+		)
+	}
+	honoBody.push(
 		`  },`,
 		`  subscriptionServer: () => new RemultPartySubscriptionServer(),`,
 		`  buildEntities: () => [],`,
 		`  getUser: () => undefined,`,
 		`}))`,
+	)
+	if (betterauth) {
+		honoBody.push(
+			`const auth = betterAuth(getAuthConfig(env.DB, env.BETTER_AUTH_SECRET, env.BETTER_AUTH_URL))`,
+			`app.on(['GET', 'POST'], '/api/auth/*', async (c) => auth.handler(c.req.raw))`,
+		)
+	}
+	honoBody.push(
 		`app.use('/party/*', async (c) => {`,
 		`  const env = c.env as Cloudflare.Env`,
 		`  return env.REMULT_ROOM.fetch(c.req.raw)`,
 		`})`,
 		`vike(app, [])`,
 		`export { app }`, ``
-	].join('\n'));
+	)
+	writeFileSync(join(root, 'server', 'hono.ts'), [...honoImports, ...honoBody].join('\n'))
 	writeFileSync(join(root, 'lib', 'remult-client.ts'), [
 		`import { RemultPartySubscriptionClient } from 'remult-partykit'`,
 		`import { remult } from 'remult'`,
@@ -395,11 +440,142 @@ if (remult && !cloudflare) {
 		`export const api = remult({ entities: [], getUser: async () => undefined })`, ``
 	].join('\n'));
 }
+if (betterauth) {
+	mkdirSync(join(root, 'entities'), { recursive: true });
+	writeFileSync(join(root, 'entities', 'auth.ts'), [
+		`import { Allow, Entity, Fields, Relations, Validators } from 'remult'`,
+		``,
+		`const Roles = { admin: 'admin' }`,
+		``,
+		`@Entity('user', { allowApiCrud: Roles.admin, allowApiRead: Allow.authenticated })`,
+		`export class User {`,
+		`  @Fields.string({ required: true, minLength: 8, maxLength: 40, validate: Validators.unique(), allowApiUpdate: false })`,
+		`  id!: string`,
+		`  @Fields.string({ required: true })`,
+		`  name = ''`,
+		`  @Fields.string({})`,
+		`  email = ''`,
+		`  @Fields.boolean({})`,
+		`  emailVerified = false`,
+		`  @Fields.string({ required: false })`,
+		`  image = ''`,
+		`  @Fields.createdAt({})`,
+		`  createdAt!: Date`,
+		`  @Fields.updatedAt({})`,
+		`  updatedAt!: Date`,
+		`}`,
+		``,
+		`@Entity('session', { allowApiCrud: Roles.admin })`,
+		`export class Session {`,
+		`  @Fields.string({ required: true, minLength: 8, maxLength: 40, validate: Validators.unique(), allowApiUpdate: false })`,
+		`  id!: string`,
+		`  @Fields.date({ required: true })`,
+		`  expiresAt = new Date()`,
+		`  @Fields.string({})`,
+		`  token = ''`,
+		`  @Fields.createdAt({})`,
+		`  createdAt!: Date`,
+		`  @Fields.updatedAt({ required: true, allowApiUpdate: false })`,
+		`  updatedAt!: Date`,
+		`  @Fields.string({ required: false })`,
+		`  ipAddress = ''`,
+		`  @Fields.string({ required: false })`,
+		`  userAgent = ''`,
+		`  @Fields.string({ required: true })`,
+		`  userId = ''`,
+		`  @Relations.toOne(() => User, 'id')`,
+		`  user!: User`,
+		`}`,
+		``,
+		`@Entity('account', { allowApiCrud: Roles.admin })`,
+		`export class Account {`,
+		`  @Fields.string({ required: true, minLength: 8, maxLength: 40, validate: Validators.unique(), allowApiUpdate: false })`,
+		`  id!: string`,
+		`  @Fields.string({ required: true, allowApiUpdate: false })`,
+		`  accountId = ''`,
+		`  @Fields.string({ required: true, allowApiUpdate: false })`,
+		`  providerId = ''`,
+		`  @Fields.string({ required: true })`,
+		`  userId = ''`,
+		`  @Relations.toOne(() => User, 'id')`,
+		`  user!: User`,
+		`  @Fields.string({ required: false, allowApiUpdate: false })`,
+		`  accessToken = ''`,
+		`  @Fields.string({ required: false, allowApiUpdate: false })`,
+		`  refreshToken = ''`,
+		`  @Fields.string({ required: false })`,
+		`  idToken = ''`,
+		`  @Fields.date({ required: false })`,
+		`  accessTokenExpiresAt = new Date()`,
+		`  @Fields.date({ required: false })`,
+		`  refreshTokenExpiresAt = new Date()`,
+		`  @Fields.string({ required: false })`,
+		`  scope = ''`,
+		`  @Fields.string({ required: false, allowApiUpdate: false })`,
+		`  password = ''`,
+		`  @Fields.createdAt({ required: true, defaultValue: () => new Date(), allowApiUpdate: false })`,
+		`  createdAt!: Date`,
+		`  @Fields.updatedAt({ required: true, allowApiUpdate: false })`,
+		`  updatedAt!: Date`,
+		`}`,
+		``,
+		`@Entity('verification', { allowApiCrud: Roles.admin })`,
+		`export class Verification {`,
+		`  @Fields.string({ required: true, minLength: 8, maxLength: 40, validate: Validators.unique(), allowApiUpdate: false })`,
+		`  id!: string`,
+		`  @Fields.string({ required: true })`,
+		`  identifier = ''`,
+		`  @Fields.string({ required: true })`,
+		`  value = ''`,
+		`  @Fields.date({ required: true })`,
+		`  expiresAt = new Date()`,
+		`  @Fields.createdAt({ required: true, defaultValue: () => new Date(), allowApiUpdate: false })`,
+		`  createdAt!: Date`,
+		`  @Fields.updatedAt({ required: true, defaultValue: () => new Date(), allowApiUpdate: false })`,
+		`  updatedAt!: Date`,
+		`}`,
+		``
+	].join('\n'));
+	mkdirSync(join(root, 'server'), { recursive: true });
+	writeFileSync(join(root, 'server', 'better-auth.ts'), [
+		`import { remultAdapter } from '@nerdfolio/remult-better-auth'`,
+		`import { User, Session, Account, Verification } from '../entities/auth'`,
+		`import type { BetterAuthOptions } from 'better-auth'`,
+		`import type { ClassType } from 'remult'`,
+		`import { SqlDatabase, withRemult } from 'remult'`,
+		`import { D1BindingClient, D1DataProvider } from 'remult/remult-d1'`,
+		``,
+		`export function getAuthConfig(db: D1Database, secret: string, url?: string): BetterAuthOptions {`,
+		`  const dataProvider = new SqlDatabase(new D1DataProvider(new D1BindingClient(db)))`,
+		``,
+		`  withRemult(`,
+		`    async (remult) => {`,
+		`      const entities = [User, Session, Account, Verification] as ClassType<unknown>[]`,
+		`      const metadata = entities.map((e) => remult.repo(e).metadata)`,
+		`      await dataProvider.ensureSchema(metadata)`,
+		`    },`,
+		`    { dataProvider }`,
+		`  ).catch((e: unknown) => console.error('Schema init failed:', e))`,
+		``,
+		`  return {`,
+		`    secret,`,
+		`    baseURL: url,`,
+		`    database: remultAdapter({`,
+		`      authEntities: { User, Session, Account, Verification },`,
+		`      dataProvider`,
+		`    }),`,
+		`    emailAndPassword: { enabled: true }`,
+		`  }`,
+		`}`,
+		``
+	].join('\n'));
+}
 
 // --- install ---
 let label = `style: ${style}`;
 if (cloudflare) label += ', CF Workers';
 if (remult) label += ', Remult';
+if (betterauth) label += ', Better Auth';
 console.log(`\n  \x1b[1mCreated ${name}  (${label})\x1b[22m`);
 console.log(`\n  Installing dependencies...`);
 execSync('npm install', { cwd: root, stdio: 'inherit' });
