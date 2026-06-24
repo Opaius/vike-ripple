@@ -1,6 +1,6 @@
 {
 	"name": "create-vike-ripple",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"description": "Scaffold a Vike + Ripple TS project with Tailwind CSS, Panda CSS, Cloudflare Workers, and Remult",
 	"type": "module",
 	"bin": {
