@@ -1,0 +1,35 @@
+{
+	"name": "@cioky/ripple-query-remult",
+	"version": "0.1.0",
+	"description": "Remult adapter for @cioky/ripple-query — auto-key derivation, LiveQuery invalidation",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"default": "./src/index.ts"
+		}
+	},
+	"files": [
+		"src"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Opaius/vike-ripple.git"
+	},
+	"homepage": "https://github.com/Opaius/vike-ripple",
+	"bugs": {
+		"url": "https://github.com/Opaius/vike-ripple/issues"
+	},
+	"keywords": [
+		"ripple",
+		"remult",
+		"query",
+		"livequery"
+	],
+	"license": "MIT",
+	"peerDependencies": {
+		"@cioky/ripple-query": "0.1.x",
+		"remult": ">=0.26.0",
+		"remult-partykit": ">=0.0.1"
+	}
+}

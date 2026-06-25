@@ -5,14 +5,19 @@ Thanks for considering contributing to vike-ripple!
 ## Project structure
 
 ```
-vike-ripple/
-├── create-vike-ripple/        — Project scaffold CLI
-├── vike-ripple/               — Core Vike + Ripple integration
-├── vike-ripple-pandacss/      — Panda CSS integration
-└── vike-ripple-tailwindcss/   — Tailwind CSS integration
+packages/
+├── vike/
+│   ├── core/               — @cioky/vike-core (SSR, streaming, Layout, Head, hooks)
+│   ├── tailwindcss/        — @cioky/vike-tailwindcss
+│   ├── pandacss/           — @cioky/vike-pandacss
+│   └── create/             — @cioky/vike-create (scaffold CLI)
+└── ripple/
+    ├── transitions/        — @cioky/ripple-transitions
+    ├── query/              — @cioky/ripple-query
+    └── query-remult/       — @cioky/ripple-query-remult
 ```
 
-Each package is self-contained in its directory. Each has its own `README.md` for install/setup. See `vike-ripple/docs/quirks.md` for known issues and design decisions.
+Each package is self-contained in its directory. Each has its own `README.md` for install/setup. See `packages/vike/core/docs/quirks.md` for known issues and design decisions.
 
 ## Getting started
 
@@ -38,7 +43,7 @@ No build step needed — all packages are plain JavaScript/TypeScript source tha
 
 ### Updating documentation
 
-- If you fix a bug or discover a caveat, add it to `vike-ripple/docs/quirks.md`
+- If you fix a bug or discover a caveat, add it to `packages/vike/core/docs/quirks.md`
 - If you add or rename a package, update the root `README.md` table
 
 ## Testing
@@ -47,7 +52,7 @@ No build step needed — all packages are plain JavaScript/TypeScript source tha
 
 ```bash
 # Create a test project from local source
-node create-vike-ripple/src/index.js test-app --style tailwind
+node packages/vike/create/src/index.js test-app --style tailwind
 cd test-app
 
 # Start dev server
@@ -79,11 +84,11 @@ await b.close();
 ### Smoke test all flag combinations
 
 ```bash
-node create-vike-ripple/src/index.js test-tw --style tailwind
-node create-vike-ripple/src/index.js test-pd --style pandacss
-node create-vike-ripple/src/index.js test-cf --style tailwind --cloudflare
-node create-vike-ripple/src/index.js test-rm --style tailwind --remult
-node create-vike-ripple/src/index.js test-rmcf --style pandacss --remult --cloudflare
+node packages/vike/create/src/index.js test-tw --style tailwind
+node packages/vike/create/src/index.js test-pd --style pandacss
+node packages/vike/create/src/index.js test-cf --style tailwind --cloudflare
+node packages/vike/create/src/index.js test-rm --style tailwind --remult
+node packages/vike/create/src/index.js test-rmcf --style pandacss --remult --cloudflare
 cd test-rmcf && npx vite build
 ```
 
@@ -100,4 +105,4 @@ cd test-rmcf && npx vite build
 
 - Report bugs via [GitHub Issues](https://github.com/Opaius/vike-ripple/issues)
 - Include: what you did, what you expected, what happened, and the output of `npx vike dev`
-- Check `vike-ripple/docs/quirks.md` first — your issue might be known
+- Check `packages/vike/core/docs/quirks.md` first — your issue might be known

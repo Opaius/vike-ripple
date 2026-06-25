@@ -11,20 +11,12 @@
 	},
 	"include": [],
 	"references": [
-		{
-			"path": "vike-ripple"
-		},
-		{
-			"path": "vike-ripple-tailwindcss"
-		},
-		{
-			"path": "vike-ripple-pandacss"
-		},
-		{
-			"path": "create-vike-ripple"
-		},
-		{
-			"path": "ripple-transitions"
-		}
+		{ "path": "packages/vike/core" },
+		{ "path": "packages/vike/tailwindcss" },
+		{ "path": "packages/vike/pandacss" },
+		{ "path": "packages/vike/create" },
+		{ "path": "packages/ripple/transitions" },
+		{ "path": "packages/ripple/query" },
+		{ "path": "packages/ripple/query-remult" },
+		{ "path": "packages/remult/partykit" }
 	]
-}

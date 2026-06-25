@@ -1,0 +1,91 @@
+{
+	"name": "@cioky/vike-core",
+	"version": "0.5.9",
+	"description": "Vike extension for Ripple TS — SSR, streaming, Layout, Head, SEO configs, hooks",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./index.d.ts",
+			"default": "./src/index.js"
+		},
+		"./config": {
+			"types": "./index.d.ts",
+			"default": "./src/config.js"
+		},
+		"./setup": {
+			"types": "./index.d.ts",
+			"default": "./src/setup.js"
+		},
+		"./usePageContext": {
+			"types": "./index.d.ts",
+			"default": "./src/hooks/usePageContext.js"
+		},
+		"./useData": {
+			"types": "./index.d.ts",
+			"default": "./src/hooks/useData.js"
+		},
+		"./useHydrated": {
+			"types": "./index.d.ts",
+			"default": "./src/hooks/useHydrated.js"
+		},
+		"./useConfig": {
+			"browser": "./src/hooks/useConfig/useConfig-client.js",
+			"default": "./src/hooks/useConfig/useConfig-server.js",
+			"types": "./index.d.ts"
+		},
+		"./Config": {
+			"browser": "./src/components/Config/Config-client.js",
+			"default": "./src/components/Config/Config-server.js",
+			"types": "./index.d.ts"
+		},
+		"./Head": {
+			"browser": "./src/components/Head/Head-client.js",
+			"default": "./src/components/Head/Head-server.js",
+			"types": "./index.d.ts"
+		},
+		"./clientOnly": {
+			"types": "./index.d.ts",
+			"default": "./src/helpers/clientOnly.js"
+		},
+		"./ClientOnly": {
+			"types": "./index.d.ts",
+			"default": "./src/components/ClientOnly.js"
+		},
+		"./__internal/integration/onRenderHtml": {
+			"types": "./index.d.ts",
+			"default": "./src/integration/onRenderHtml.js"
+		},
+		"./__internal/integration/onRenderClient": {
+			"types": "./index.d.ts",
+			"default": "./src/integration/onRenderClient.js"
+		}
+	},
+	"bin": {
+		"vike-core": "src/setup.js"
+	},
+	"files": [
+		"src",
+		"index.d.ts"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Opaius/vike-ripple.git"
+	},
+	"homepage": "https://github.com/Opaius/vike-ripple",
+	"bugs": {
+		"url": "https://github.com/Opaius/vike-ripple/issues"
+	},
+	"keywords": [
+		"vike",
+		"ripple",
+		"ripplets",
+		"ssr",
+		"vite"
+	],
+	"license": "MIT",
+	"peerDependencies": {
+		"vike": ">=0.4.259",
+		"@ripple-ts/vite-plugin": ">=0.3.0",
+		"ripple": ">=0.1.0"
+	}
+}

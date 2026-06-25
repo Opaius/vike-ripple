@@ -6,27 +6,28 @@ Monorepo for [Vike](https://vike.dev) + [Ripple TS](https://ripple-ts.com) integ
 
 ## Packages
 
-Each package has its own `README.md` with full install, setup, and usage instructions.
-
 | Package | npm | What it does |
 |---------|-----|-------------|
-| [`vike-ripple`](./vike-ripple/README.md) | [![npm](https://img.shields.io/npm/v/vike-ripple)](https://www.npmjs.com/package/vike-ripple) | Core: SSR, CSR, streaming, head management, `.tsrx` support, hooks |
-| [`vike-ripple-tailwindcss`](./vike-ripple-tailwindcss/README.md) | [![npm](https://img.shields.io/npm/v/vike-ripple-tailwindcss)](https://www.npmjs.com/package/vike-ripple-tailwindcss) | Tailwind CSS v4 integration with `@apply` in `<style>` blocks |
-| [`vike-ripple-pandacss`](./vike-ripple-pandacss/README.md) | [![npm](https://img.shields.io/npm/v/vike-ripple-pandacss)](https://www.npmjs.com/package/vike-ripple-pandacss) | Panda CSS integration — `.tsrx` extraction via `parser:before` hook |
-| [`create-vike-ripple`](./create-vike-ripple/README.md) | [![npm](https://img.shields.io/npm/v/create-vike-ripple)](https://www.npmjs.com/package/create-vike-ripple) | Project scaffold generator with `--style` and `--cloudflare` flags |
+| [`@cioky/vike-core`](./packages/vike/core/README.md) | [![npm](https://img.shields.io/npm/v/@cioky/vike-core)](https://www.npmjs.com/package/@cioky/vike-core) | Core: SSR, CSR, streaming, head management, `.tsrx` support, hooks |
+| [`@cioky/vike-tailwindcss`](./packages/vike/tailwindcss/README.md) | [![npm](https://img.shields.io/npm/v/@cioky/vike-tailwindcss)](https://www.npmjs.com/package/@cioky/vike-tailwindcss) | Tailwind CSS v4 integration with `@apply` in `<style>` blocks |
+| [`@cioky/vike-pandacss`](./packages/vike/pandacss/README.md) | [![npm](https://img.shields.io/npm/v/@cioky/vike-pandacss)](https://www.npmjs.com/package/@cioky/vike-pandacss) | Panda CSS integration — `.tsrx` extraction via `parser:before` hook |
+| [`@cioky/vike-create`](./packages/vike/create/README.md) | [![npm](https://img.shields.io/npm/v/@cioky/vike-create)](https://www.npmjs.com/package/@cioky/vike-create) | Project scaffold generator with `--style` and `--cloudflare` flags |
+| [`@cioky/ripple-transitions`](./packages/ripple/transitions/README.md) | [![npm](https://img.shields.io/npm/v/@cioky/ripple-transitions)](https://www.npmjs.com/package/@cioky/ripple-transitions) | Transition & animation primitives for Ripple |
+| [`@cioky/ripple-query`](./packages/ripple/query/README.md) | [![npm](https://img.shields.io/npm/v/@cioky/ripple-query)](https://www.npmjs.com/package/@cioky/ripple-query) | Reactive query cache — `Tracked`-based, GC'd, SSR-friendly |
+| [`@cioky/ripple-query-remult`](./packages/ripple/query-remult/README.md) | [![npm](https://img.shields.io/npm/v/@cioky/ripple-query-remult)](https://www.npmjs.com/package/@cioky/ripple-query-remult) | Remult adapter — auto-key derivation, LiveQuery invalidation |
 
 ## Quick Start
 
 ```bash
 # Create a new project (default: Tailwind CSS)
-npx create-vike-ripple my-app
+npx @cioky/vike-create my-app
 cd my-app && npm run dev
 
 # With Panda CSS
-npx create-vike-ripple my-app --style pandacss
+npx @cioky/vike-create my-app --style pandacss
 
 # With Cloudflare Workers + Remult
-npx create-vike-ripple my-app --style tailwind --cloudflare --remult
+npx @cioky/vike-create my-app --style tailwind --cloudflare --remult
 ```
 
 ## Why?
@@ -39,9 +40,5 @@ These packages fix all three issues with minimal, automatic patches applied duri
 
 | Document | What's in it |
 |----------|-------------|
-| [`vike-ripple/docs/quirks.md`](./vike-ripple/docs/quirks.md) | Every bug, fix, caveat, and workaround discovered during development |
+| [`packages/vike/core/docs/quirks.md`](./packages/vike/core/docs/quirks.md) | Every bug, fix, caveat, and workaround discovered during development |
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Project structure, how to make changes, testing |
-| [`vike-ripple/README.md`](./vike-ripple/README.md) | Core package install & setup |
-| [`vike-ripple-tailwindcss/README.md`](./vike-ripple-tailwindcss/README.md) | Tailwind CSS integration docs |
-| [`vike-ripple-pandacss/README.md`](./vike-ripple-pandacss/README.md) | Panda CSS integration docs |
-| [`create-vike-ripple/README.md`](./create-vike-ripple/README.md) | Scaffold generator docs |

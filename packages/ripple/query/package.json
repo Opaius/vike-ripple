@@ -1,0 +1,33 @@
+{
+	"name": "@cioky/ripple-query",
+	"version": "0.1.0",
+	"description": "Tiny, reactive query cache for Ripple TS — Tracked-based, GC-collected, SSR-friendly",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"default": "./src/index.ts"
+		}
+	},
+	"files": [
+		"src"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Opaius/vike-ripple.git"
+	},
+	"homepage": "https://github.com/Opaius/vike-ripple",
+	"bugs": {
+		"url": "https://github.com/Opaius/vike-ripple/issues"
+	},
+	"keywords": [
+		"ripple",
+		"query",
+		"cache",
+		"reactive"
+	],
+	"license": "MIT",
+	"peerDependencies": {
+		"ripple": ">=0.3.0"
+	}
+}

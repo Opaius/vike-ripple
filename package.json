@@ -1,18 +1,28 @@
 {
 	"name": "vike-ripple-monorepo",
 	"private": true,
+	"workspaces": [
+		"packages/vike/core",
+		"packages/vike/tailwindcss",
+		"packages/vike/pandacss",
+		"packages/vike/create",
+		"packages/ripple/transitions",
+		"packages/ripple/query",
+		"packages/remult/partykit"
+	],
 	"scripts": {
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"format": "biome format . --write",
-		"check:all": "biome check . && npm run build:rmpk",
-		"build:rmpk": "cd ../remult-partykit && npm run build",
+		"check:all": "biome check . && bun run build:rmpk",
+		"build:rmpk": "cd ../remult-partykit && bun run build",
 		"check:types": "tsc --noEmit"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.0",
 		"@tsrx/ripple": "^0.1.33",
 		"@tsrx/typescript-plugin": "^0.3.85",
+		"ripple": "^0.3.85",
 		"typescript": "^6.0.3"
 	}
 }

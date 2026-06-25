@@ -76,19 +76,22 @@ Default section order:
 
 ## User Preferences
 
-- Monorepo for Vike + Ripple TS integration. Packages: vike-ripple, vike-ripple-tailwindcss, vike-ripple-pandacss, create-vike-ripple
+- Monorepo for Vike + Ripple TS integration. Packages: @cioky/vike-core, @cioky/vike-tailwindcss, @cioky/vike-pandacss, @cioky/vike-create, @cioky/ripple-transitions, @cioky/ripple-query, @cioky/ripple-query-remult
 - Use `ripple-partykit` (the old separate project) is deleted. Use `remult-partykit` (npm) for Remult + Cloudflare DO realtime
-- Setup order matters: `vike-ripple setup` first, then style plugin setup (tailwindcss or pandacss)
+- Setup order matters: `@cioky/vike-core setup` first, then style plugin setup (tailwindcss or pandacss)
 - Plugin order in vite.config: `vike()` before `vikeRipple()`
-- All bugs, fixes, and caveats documented in `vike-ripple/docs/quirks.md`
+- All bugs, fixes, and caveats documented in `packages/vike/core/docs/quirks.md`
 - Cold-test every change: create fresh project, SSR check, click routing test
 
 ## Child DOX Index
 
 | Path | Scope |
 |------|-------|
-| [`vike-ripple/AGENTS.md`](./vike-ripple/AGENTS.md) | Core Vike + Ripple integration package |
-| [`vike-ripple-tailwindcss/AGENTS.md`](./vike-ripple-tailwindcss/AGENTS.md) | Tailwind CSS v4 integration |
-| [`vike-ripple-pandacss/AGENTS.md`](./vike-ripple-pandacss/AGENTS.md) | Panda CSS integration |
-| [`create-vike-ripple/AGENTS.md`](./create-vike-ripple/AGENTS.md) | Project scaffold generator |
-| [`vike-ripple/docs/AGENTS.md`](./vike-ripple/docs/AGENTS.md) | Documentation (quirks, guides) |
+| [`packages/vike/core/AGENTS.md`](./packages/vike/core/AGENTS.md) | Core Vike + Ripple integration package |
+| [`packages/vike/tailwindcss/AGENTS.md`](./packages/vike/tailwindcss/AGENTS.md) | Tailwind CSS v4 integration |
+| [`packages/vike/pandacss/AGENTS.md`](./packages/vike/pandacss/AGENTS.md) | Panda CSS integration |
+| [`packages/vike/create/AGENTS.md`](./packages/vike/create/AGENTS.md) | Project scaffold generator |
+| [`packages/vike/core/docs/AGENTS.md`](./packages/vike/core/docs/AGENTS.md) | Documentation (quirks, guides) |
+| [`packages/ripple/transitions/AGENTS.md`](./packages/ripple/transitions/AGENTS.md) | Transition & animation library |
+| [`packages/ripple/query/AGENTS.md`](./packages/ripple/query/AGENTS.md) | Reactive query cache |
+| [`packages/ripple/query-remult/AGENTS.md`](./packages/ripple/query-remult/AGENTS.md) | Remult adapter for ripple-query |
