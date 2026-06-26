@@ -1,6 +1,6 @@
 {
 	"name": "@cioky/ripple-query-remult",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "Remult adapter for @cioky/ripple-query — useQuery, mutation, typed invalidation registry, LiveQuery, Infinite Query",
 	"type": "module",
 	"exports": {
@@ -32,7 +32,7 @@
 	],
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Opaius/vike-ripple.git"
+		"url": "git+https://github.com/Opaius/vike-ripple.git"
 	},
 	"homepage": "https://github.com/Opaius/vike-ripple",
 	"bugs": {
