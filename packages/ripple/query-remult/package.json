@@ -1,16 +1,34 @@
 {
 	"name": "@cioky/ripple-query-remult",
-	"version": "0.1.0",
-	"description": "Remult adapter for @cioky/ripple-query — auto-key derivation, LiveQuery invalidation",
+	"version": "0.2.0",
+	"description": "Remult adapter for @cioky/ripple-query — useQuery, mutation, typed invalidation registry, LiveQuery, Infinite Query",
 	"type": "module",
 	"exports": {
 		".": {
 			"types": "./src/index.ts",
 			"default": "./src/index.ts"
+		},
+		"./use-query": {
+			"types": "./use-query.ts",
+			"default": "./use-query.ts"
+		},
+		"./use-live-query": {
+			"types": "./use-live-query.ts",
+			"default": "./use-live-query.ts"
+		},
+		"./use-infinite-query": {
+			"types": "./use-infinite-query.ts",
+			"default": "./use-infinite-query.ts"
 		}
 	},
 	"files": [
-		"src"
+		"src",
+		"use-query.tsrx",
+		"use-query.ts",
+		"use-live-query.tsrx",
+		"use-live-query.ts",
+		"use-infinite-query.tsrx",
+		"use-infinite-query.ts"
 	],
 	"repository": {
 		"type": "git",
@@ -28,7 +46,7 @@
 	],
 	"license": "MIT",
 	"peerDependencies": {
-		"@cioky/ripple-query": "0.1.x",
+		"@cioky/ripple-query": "0.2.x",
 		"remult": ">=0.26.0",
 		"remult-partykit": ">=0.0.1"
 	}

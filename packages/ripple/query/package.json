@@ -1,6 +1,6 @@
 {
 	"name": "@cioky/ripple-query",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Tiny, reactive query cache for Ripple TS — Tracked-based, GC-collected, SSR-friendly",
 	"type": "module",
 	"exports": {

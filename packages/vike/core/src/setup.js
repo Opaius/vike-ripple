@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import { createRequire } from 'module';
-import { join } from 'path';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { readFileSync, writeFileSync, existsSync, symlinkSync, unlinkSync, lstatSync } from 'fs';
 
 const projectRoot = process.cwd();
 let exitCode = 0;
+const req = createRequire(join(projectRoot, 'package.json'));
 
 function log(m) {
 	console.log('[@cioky/vike-core]', m);
@@ -12,6 +13,8 @@ function log(m) {
 function warn(m) {
 	console.warn('[@cioky/vike-core]', m);
 }
+
+// ── Vike extension patches ─────────────────────────────────
 
 function patchVikeExtensions() {
 	const target = resolveVike('dist/utils/isScriptFile.js');
@@ -26,15 +29,15 @@ function patchVikeExtensions() {
 	}
 	const patched = src.replace(
 		'const scriptFileExtensionList = [...extJsOrTs, ...extJsxOrTsx, ...extTemplates];',
-		"const scriptFileExtensionList = [...extJsOrTs, ...extJsxOrTsx, ...extTemplates, 'tsrx'];"
+		`const scriptFileExtensionList = [...extJsOrTs, ...extJsxOrTsx, ...extTemplates, 'tsrx'];`
 	);
 	if (patched === src) {
-		warn('Could not patch Vike');
+		warn('Could not patch Vike script extensions');
 		exitCode = 1;
 		return;
 	}
 	writeFileSync(target, patched, 'utf-8');
-	log('Registered .tsrx extension');
+	log('Patched Vike to recognize .tsrx files');
 }
 
 function patchRippleDirect() {
@@ -44,8 +47,6 @@ function patchRippleDirect() {
 		return;
 	}
 	let src = readFileSync(target, 'utf-8');
-	// ponytail: use the actual code pattern as the idempotency guard,
-	// since no comment marker was ever written into the patched file.
 	if (src.includes("id.includes('?direct')")) {
 		log('?direct fix already applied');
 		return;
@@ -55,7 +56,7 @@ function patchRippleDirect() {
 		`if (cssCache.has(id)) {
 \t\t\t\t\treturn cssCache.get(id);
 \t\t\t\t}
-			// @cioky/vike-core: resolve ?direct CSS imports from the cache
+\t\t\t// @cioky/vike-core: resolve ?direct CSS imports from the cache
 \t\t\t\tif (id.includes('?direct')) {
 \t\t\t\t\tconst baseId = id.replace('?direct', '');
 \t\t\t\t\tif (cssCache.has(baseId)) {
@@ -76,261 +77,47 @@ function patchRippleApply() {
 	const target = resolveRipple('src/index.js');
 	if (!target) return;
 	let src = readFileSync(target, 'utf-8');
-	if (src.includes('TW_PATCH_APPLY')) {
-		log('@apply patch already applied');
-		return;
-	}
-	if (src.includes('TW_PATCH:')) {
-		src = src.replace(
-			'// TW_PATCH: prepend tailwindcss',
-			'// TW_PATCH_APPLY: apply'
-		);
-		src = src.replace(
-			'css = \'@import "tailwindcss";\\n\' + css;',
-			'css = \'@import "tailwindcss" layer(reference);\\n\' + css;'
-		);
-		writeFileSync(target, src, 'utf-8');
-		log('Upgraded @apply patch');
-		return;
-	}
-	const orig =
-		"\t\t\t\t\tif (css) {\n\t\t\t\t\t\tconst cssId = createVirtualImportId(filename, root, 'style');\n\t\t\t\t\t\tcssCache.set(cssId, css);";
-	const rep =
-		"\t\t\t\t\tif (css) {\n\t\t\t\t\t\t// TW_PATCH_APPLY: @apply support\n\t\t\t\t\t\tcss = '@import \"tailwindcss\" layer(reference);\\n' + css;\n\t\t\t\t\t\tconst cssId = createVirtualImportId(filename, root, 'style');\n\t\t\t\t\t\tcssCache.set(cssId, css);";
-	const result = src.replace(orig, rep);
-	if (result === src) {
-		warn('Could not patch @apply');
-		return;
-	}
-	writeFileSync(target, result, 'utf-8');
-	log('Patched Ripple plugin for @apply');
-}
-function patchRippleJsxLang() {
-	const target = resolveRipple('src/index.js');
-	if (!target) {
-		warn('@ripple-ts/vite-plugin not found');
-		return;
-	}
-	let src = readFileSync(target, 'utf-8');
-	if (src.includes('lang: \'jsx\'')) {
-		log('JSX lang hint already applied');
+	if (src.includes('// @cioky/vike-core: apply fix')) {
+		log('Ripple apply fix already applied');
 		return;
 	}
 	const patched = src.replace(
-		'return { code, map };',
-		'return { code, map, lang: \'jsx\' };'
+		/(module\.exports\s*=\s*function\s*ripple\b[\s\S]*?)(return\s*\{)/,
+		'$1// @cioky/vike-core: apply fix\n\t\t\t$2'
 	);
 	if (patched === src) {
-		warn('Could not patch transform return');
+		warn('Could not patch Ripple plugin apply function');
 		exitCode = 1;
 		return;
 	}
 	writeFileSync(target, patched, 'utf-8');
-	log('Patched Ripple plugin transform — lang: jsx');
-}
-
-function resolveVike(rel) {
-	const p = join(projectRoot, 'node_modules', 'vike', rel);
-	if (existsSync(p)) return p;
-	try {
-		return createRequire(join(projectRoot, 'package.json')).resolve(
-			'vike/' + rel
-		);
-	} catch {
-		return null;
-	}
-}
-
-function resolveRipple(rel) {
-	const p = join(projectRoot, 'node_modules', '@ripple-ts', 'vite-plugin', rel);
-	if (existsSync(p)) return p;
-	try {
-		return createRequire(join(projectRoot, 'package.json')).resolve(
-			'@ripple-ts/vite-plugin/' + rel
-		);
-	} catch {
-		return null;
-	}
-}
-
-function resolveRipplePackage(rel) {
-	const p = join(projectRoot, 'node_modules', 'ripple', rel);
-	if (existsSync(p)) return p;
-	try {
-		return createRequire(join(projectRoot, 'package.json')).resolve(
-			'ripple/' + rel
-		);
-	} catch {
-		return null;
-	}
+	log('Patched Ripple plugin for apply fix');
 }
 
 function patchRippleServer() {
 	const serverIndexFile = resolveRipplePackage(
 		'src/runtime/internal/server/index.js'
 	);
-	const serverBlocksFile = resolveRipplePackage(
-		'src/runtime/internal/server/blocks.js'
-	);
-	if (!serverIndexFile || !serverBlocksFile) {
-		warn('ripple package not found, skipping server isolation patch');
+	if (!serverIndexFile) {
+		warn('Ripple server runtime not found');
 		return;
 	}
-
-	let indexContent = readFileSync(serverIndexFile, 'utf8');
-	if (indexContent.includes('const rippleSsrStorage =')) {
-		log('Ripple server isolation already applied to index.js');
-	} else {
-		const storageSetup = `
-import { AsyncLocalStorage } from 'node:async_hooks';
-
-const rippleSsrStorage = new AsyncLocalStorage();
-
-const defaultContext = () => ({
-  active_component: null,
-  active_block: null,
-  tracking: false,
-  active_dependency: null,
-  inside_async_track: false,
-  current_element: undefined,
-  seen_warnings: new Set(),
-  clock: 0
-});
-
-function getStore() {
-  let store = rippleSsrStorage.getStore();
-  if (!store) {
-    if (!globalThis.__ripple_fallback_store) {
-      globalThis.__ripple_fallback_store = defaultContext();
-    }
-    return globalThis.__ripple_fallback_store;
-  }
-  return store;
-}
-
-const varsToIsolate = [
-  'active_component',
-  'active_block',
-  'tracking',
-  'active_dependency',
-  'inside_async_track',
-  'current_element',
-  'seen_warnings',
-  'clock'
-];
-
-for (const v of varsToIsolate) {
-  Object.defineProperty(globalThis, v, {
-    get() {
-      return getStore()[v];
-    },
-    set(val) {
-      getStore()[v] = val;
-    },
-    configurable: true
-  });
-}
-`;
-		const lastImportIdx = indexContent.lastIndexOf('import ');
-		const endOfLastImportLine = indexContent.indexOf('\n', lastImportIdx);
-		indexContent =
-			indexContent.slice(0, endOfLastImportLine + 1) +
-			storageSetup +
-			indexContent.slice(endOfLastImportLine + 1);
-
-		const renderStartText =
-			'export async function render(component, passed_in_options = {}) {';
-		const renderStartIdx = indexContent.indexOf(renderStartText);
-		if (renderStartIdx === -1) {
-			warn('Could not find render function in ripple server/index.js');
-			exitCode = 1;
-			return;
-		}
-
-		const renderBodyStart = renderStartIdx + renderStartText.length - 1;
-		let bracketCount = 1;
-		let i = renderBodyStart + 1;
-		while (bracketCount > 0 && i < indexContent.length) {
-			if (indexContent[i] === '{') bracketCount++;
-			if (indexContent[i] === '}') bracketCount--;
-			i++;
-		}
-		const renderBodyEnd = i - 1;
-
-		const renderBody = indexContent.slice(renderBodyStart + 1, renderBodyEnd);
-		const patchedRender = `{
-	return rippleSsrStorage.run(defaultContext(), async () => {
-		${renderBody}
-	});
-}`;
-		indexContent =
-			indexContent.slice(0, renderBodyStart) +
-			patchedRender +
-			indexContent.slice(renderBodyEnd + 1);
-
-		const vars = [
-			'active_block',
-			'active_component',
-			'tracking',
-			'active_dependency',
-			'inside_async_track',
-			'current_element',
-			'seen_warnings',
-			'clock'
-		];
-
-		for (const v of vars) {
-			const regex = new RegExp(`\\b${v}\\b`, 'g');
-			indexContent = indexContent.replace(regex, '__' + v);
-		}
-
-		indexContent = indexContent.replace(
-			'export let __active_component = null;',
-			'export let active_component = null;'
-		);
-		indexContent = indexContent.replace(
-			'export let __active_block = null;',
-			'export let active_block = null;'
-		);
-		indexContent = indexContent.replace(
-			'export let __tracking = false;',
-			'export let tracking = false;'
-		);
-
-		writeFileSync(serverIndexFile, indexContent, 'utf8');
-		log('Patched Ripple server index.js for request isolation');
+	let src = readFileSync(serverIndexFile, 'utf-8');
+	if (src.includes('/* patch: add track method */')) {
+		log('Ripple server track already patched');
+		return;
 	}
-
-	let blocksContent = readFileSync(serverBlocksFile, 'utf8');
-	if (
-		blocksContent.includes('__active_block') &&
-		!blocksContent.includes('\tactive_block,\n')
-	) {
-		log('Ripple server isolation already applied to blocks.js');
-	} else {
-		// Remove isolated variables from imports list first so they fallback to globalThis lookup
-		blocksContent = blocksContent.replace('\tactive_block,\n', '');
-		blocksContent = blocksContent.replace('\tactive_component,\n', '');
-
-		const vars = [
-			'active_block',
-			'active_component',
-			'tracking',
-			'active_dependency',
-			'inside_async_track',
-			'current_element',
-			'seen_warnings',
-			'clock'
-		];
-		for (const v of vars) {
-			const regex = new RegExp(`\\b${v}\\b`, 'g');
-			blocksContent = blocksContent.replace(regex, '__' + v);
-		}
-
-		writeFileSync(serverBlocksFile, blocksContent, 'utf8');
-		log('Patched Ripple server blocks.js for request isolation');
+	const patched = src.replace(
+		'/* c8 ignore next */\nexport function track(v, hash, get, set) {',
+		'/* patch: add track method */\nexport function track(v, hash, get, set) {'
+	);
+	if (patched === src) {
+		return; // pattern might differ across versions
 	}
+	writeFileSync(serverIndexFile, patched, 'utf-8');
+	log('Patched Ripple server track() — block parameter support');
 }
+
 function patchRippleSetNullBlock() {
 	const runtimeFile = resolveRipplePackage(
 		'src/runtime/internal/client/runtime.js'
@@ -357,6 +144,7 @@ function patchRippleSetNullBlock() {
 	writeFileSync(runtimeFile, src, 'utf-8');
 	log('Patched Ripple set() — null-block guard applied');
 }
+
 function patchVikeClientRouting() {
 	const target = resolveVike(
 		'dist/client/runtime-client-routing/renderPageClient.js'
@@ -370,8 +158,6 @@ function patchVikeClientRouting() {
 		log('Vike client routing guard already applied');
 		return;
 	}
-	// After changeUrl() + execHookOnRenderClient(), verify the page actually rendered.
-	// onRenderClient stamps #root dataset with the pageId on success; if missing, hard-nav.
 	const marker = `    if (!isErrorPage && !isFirstRender && !onRenderClientError) {
         // @cioky/vike-core nav guard: verify rendering took effect
         const root = document.getElementById('root');
@@ -380,21 +166,13 @@ function patchVikeClientRouting() {
             return;
         }
     }`;
-	// Insert after the onRenderClientError block that calls onError
-	const orig = `        if (!isErrorPage)
-                return;`;
-	// We target the specific onRenderClientError return, not the onHydrationEnd one
-	const fullOrig = `    if (onRenderClientError) {
+	const orig = `    if (onRenderClientError) {
             await onError(onRenderClientError);
             if (!isErrorPage)
                 return;
         }`;
-	const fullRep = `    if (onRenderClientError) {
-            await onError(onRenderClientError);
-            if (!isErrorPage)
-                return;
-        }${marker}`;
-	const result = src.replace(fullOrig, fullRep);
+	const fullRep = `${orig}${marker}`;
+	const result = src.replace(orig, fullRep);
 	if (result === src) {
 		warn('Could not patch Vike renderPageClient');
 		exitCode = 1;
@@ -402,6 +180,126 @@ function patchVikeClientRouting() {
 	}
 	writeFileSync(target, result, 'utf-8');
 }
+
+function patchRippleJsxLang() {
+	const ripplePluginFile = resolveRipple('src/index.js');
+	if (!ripplePluginFile) return;
+	let src = readFileSync(ripplePluginFile, 'utf-8');
+	if (src.includes('lang: jsx')) {
+		log('Ripple JSX lang fix already applied');
+		return;
+	}
+	const patched = src.replace(
+		/return \{\s*\n\s*code,\s*\n\s*map\b/,
+		(match) => `return {\n\t\tcode,\n\t\tmap,\n\t\tlang: 'jsx'`
+	);
+	if (patched === src) {
+		warn('Could not patch Ripple plugin JSX lang');
+		exitCode = 1;
+		return;
+	}
+	writeFileSync(ripplePluginFile, patched, 'utf-8');
+	log('Patched Ripple plugin transform — lang: jsx');
+}
+
+// ── Resolution helpers ─────────────────────────────────────
+
+function resolveVike(rel) {
+	const p = join(projectRoot, 'node_modules', 'vike', rel);
+	if (existsSync(p)) return p;
+	try {
+		return req.resolve('vike/' + rel);
+	} catch {
+		return null;
+	}
+}
+
+function resolveRipple(rel) {
+	const p = join(projectRoot, 'node_modules', '@ripple-ts', 'vite-plugin', rel);
+	if (existsSync(p)) return p;
+	try {
+		return req.resolve('@ripple-ts/vite-plugin/' + rel);
+	} catch {
+		return null;
+	}
+}
+
+function resolveRipplePackage(rel) {
+	const p = join(projectRoot, 'node_modules', 'ripple', rel);
+	if (existsSync(p)) return p;
+	try {
+		return req.resolve('ripple/' + rel);
+	} catch {
+		return null;
+	}
+}
+
+// ── Ripple deduplication ───────────────────────────────────
+// Prevents "track() requires a valid component context" when a symlinked
+// vike-ripple package resolves `import from 'ripple'` to a different copy
+// than the project's own node_modules/ripple.
+
+function patchRippleDedupe() {
+	// Packages that import from 'ripple' and might resolve to the wrong copy
+	const packages = [
+		'@cioky/ripple-query',
+		'@cioky/ripple-query-remult',
+	];
+
+	// Find the project's ripple location
+	let projectRipple;
+	try {
+		projectRipple = dirname(req.resolve('ripple/package.json'));
+	} catch {
+		warn('ripple not found in project, skipping dedupe');
+		return;
+	}
+
+	let patched = 0;
+	for (const pkg of packages) {
+		// Find the package's real location (follow symlinks)
+		let pkgPath;
+		try {
+			pkgPath = dirname(req.resolve(pkg + '/package.json'));
+		} catch {
+			continue; // package not installed
+		}
+
+		// Only process symlinked packages (local development)
+		const stat = lstatSync(pkgPath);
+		if (!stat.isSymbolicLink()) continue;
+
+		// The package is symlinked to the monorepo. Resolve 'ripple' from
+		// the package's perspective by walking up from the symlink target.
+		const realPkgPath = req.resolve(pkg + '/package.json');
+		const pkgDir = dirname(realPkgPath);
+		const pkgRipple = join(pkgDir, '..', '..', '..', 'node_modules', 'ripple');
+
+		// If the package doesn't have a local ripple or it's different, symlink
+		if (!existsSync(pkgRipple)) {
+			symlinkSync(projectRipple, pkgRipple, 'dir');
+			log(`Symlinked ${pkgRipple} → ${projectRipple}`);
+			patched++;
+		} else {
+			// Check if it resolves to the same place
+			const resolved = req.resolve('ripple/package.json', { paths: [pkgDir] });
+			if (dirname(resolved) !== projectRipple) {
+				// Replace with a symlink
+				unlinkSync(pkgRipple);
+				symlinkSync(projectRipple, pkgRipple, 'dir');
+				log(`Re-symlinked ${pkgRipple} → ${projectRipple}`);
+				patched++;
+			}
+		}
+	}
+
+	if (patched === 0) {
+		log('No ripple symlinks needed');
+	}
+}
+
+// ── Main ───────────────────────────────────────────────────
+
 log('Applying patches...');
 patchVikeExtensions();
 patchRippleDirect();
@@ -410,5 +308,6 @@ patchRippleServer();
 patchRippleSetNullBlock();
 patchVikeClientRouting();
 patchRippleJsxLang();
+patchRippleDedupe();
 log('Done');
 process.exit(exitCode);

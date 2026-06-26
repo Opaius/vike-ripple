@@ -3,6 +3,7 @@ import { readFileSync, mkdirSync, writeFileSync, cpSync, existsSync } from 'fs';
 import { join, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
+import { randomBytes } from 'crypto';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const tplDir = join(__dirname, '../templates');
@@ -152,7 +153,7 @@ if (cloudflare) {
 		wrangler.migrations = [{ tag: 'v1', new_sqlite_classes: ['RemultPubSubRoom', 'RemultLiveQueryStorageRoom'] }];
 		wrangler.vars = {
 			BETTER_AUTH_URL: 'http://localhost:3000',
-			BETTER_AUTH_SECRET: 'dev-secret-change-in-production!!',
+			BETTER_AUTH_SECRET: randomBytes(32).toString('hex'),
 			MAX_CONNECTIONS_PER_SHARD: '100',
 			REALTIME_LIVE_QUERY_ROOM_MODE: 'global',
 		};
@@ -228,6 +229,11 @@ if (style === 'pandacss') {
 if (cloudflare) {
 	console.log(`\n  Generating worker types...`);
 	execSync('npm run types', { cwd: root, stdio: 'inherit' });
+}
+if (betterauth) {
+	console.log(`\n  \x1b[33m⚠ BETTER_AUTH_SECRET was auto-generated in wrangler.jsonc.\x1b[0m`);
+	console.log(`  \x1b[33m  For production, set it as a Wrangler secret:\x1b[0m`);
+	console.log(`  \x1b[33m  wrangler secret put BETTER_AUTH_SECRET\x1b[0m`);
 }
 console.log(`\n  \x1b[1mDone!\x1b[22m`);
 console.log(`  cd ${name} && npm run dev`);

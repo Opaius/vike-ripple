@@ -53,6 +53,11 @@ const onRenderClient = async (pageContext) => {
 		dispose = null;
 	}
 
+	// Hydrate @cioky/ripple-query cache from SSR-serialized <script> tag
+	try {
+		const { hydrateCache } = await import('@cioky/ripple-query');
+		if (typeof hydrateCache === 'function') hydrateCache();
+	} catch {}
 	// Always use mount() — hydrate() crashes Ripple's hmr wrapper (hydrate_node is null).
 	const { mount } = await import('ripple');
 	dispose = mount(component, { target: container, props: {} });

@@ -1,0 +1,41 @@
+{
+	"$schema": "https://unpkg.com/knip@6/schema.json",
+	"ignore": [
+		"packages/vike/create/templates/**",
+		"packages/ripple/transitions/src/**",
+		"packages/vike/core/src/hooks/useConfig/configsCumulative.js",
+		"packages/vike/core/src/integration/ssrEffect.js",
+		"packages/vike/tailwindcss/vite.config.example.ts",
+		"packages/remult/partykit/src/sql-parser.ts"
+	],
+	"ignoreDependencies": [
+		"@pandacss/types",
+		"@cioky/ripple-query"
+	],
+	"workspaces": {
+		"packages/vike/core": {
+			"entry": ["src/index.js", "src/setup.js"]
+		},
+		"packages/vike/create": {
+			"entry": ["src/index.js"]
+		},
+		"packages/vike/pandacss": {
+			"entry": ["src/index.js"]
+		},
+		"packages/vike/tailwindcss": {
+			"entry": ["src/index.js"]
+		},
+		"packages/ripple/query": {
+			"entry": ["src/index.ts"]
+		},
+		"packages/ripple/query-remult": {
+			"entry": ["src/index.ts"]
+		},
+		"packages/ripple/transitions": {
+			"entry": ["src/index.tsrx"]
+		},
+		"packages/remult/partykit": {
+			"entry": ["src/index.ts"]
+		}
+	}
+}

@@ -8,21 +8,29 @@
 		"packages/vike/create",
 		"packages/ripple/transitions",
 		"packages/ripple/query",
+		"packages/ripple/query-remult",
 		"packages/remult/partykit"
 	],
 	"scripts": {
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"format": "biome format . --write",
-		"check:all": "biome check . && bun run build:rmpk",
-		"build:rmpk": "cd ../remult-partykit && bun run build",
-		"check:types": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"fallow": "fallow",
+		"check:all": "biome check . && vitest run && fallow dead-code",
+		"build:rmpk": "cd ../remult-partykit && bun run build"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.0",
 		"@tsrx/ripple": "^0.1.33",
 		"@tsrx/typescript-plugin": "^0.3.85",
+		"fallow": "^2.102.0",
+		"happy-dom": "^20.10.6",
+		"knip": "^6.21.0",
 		"ripple": "^0.3.85",
-		"typescript": "^6.0.3"
+		"typescript": "^6.0.3",
+		"vitest": "^4.1.9"
 	}
 }
