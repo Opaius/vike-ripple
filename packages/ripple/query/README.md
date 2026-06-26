@@ -8,7 +8,7 @@ bun add @cioky/ripple-query
 
 ## Usage
 
-```ts
+```tsx
 import { query, invalidateKeys } from '@cioky/ripple-query'
 
 export function TaskList() @{
@@ -35,7 +35,7 @@ invalidateKeys(['todos'])  // refetches all matching queries
 
 ### `query(key, fetcher, options?)`
 
-Returns `[data, info]` where both are `Tracked` signals.
+Returns `Tracked<T>` — the cached value, or `undefined` while loading.
 
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
@@ -46,7 +46,7 @@ Returns `[data, info]` where both are `Tracked` signals.
 
 ### `invalidateKeys(prefix)`
 
-Bump version on all entries whose serialized key starts with `prefix`. Triggers automatic refetch on active subscribers.
+Bump version on all entries whose serialized key starts with `prefix` and triggers a refetch via the stored fetcher. Active subscribers see updated data through their Tracked signal. Entries are NOT deleted — GC handles removal when subscribers reach zero.
 
 ```ts
 invalidateKeys(['todos'])                     // invalidates ['todos'], ['todos', { done: true }]
@@ -59,20 +59,23 @@ Invalidate every cached entry.
 
 ### `unsubscribe(key)`
 
-Decrement subscriber count. When count reaches zero, start GC timer. Call in block cleanup.
+Decrement subscriber count for the given key. When count reaches zero, a GC timer starts. After `gcTime` (default 5 min) the entry is removed from the cache. If a new subscriber calls `query()` before the timer fires, the GC timer is cancelled and the entry is reused.
+
+## Garbage Collection
+
+Cache entries are garbage-collected when their subscriber count reaches zero and the configured `gcTime` (default 5 minutes) has elapsed. Calling `query()` again before the timer fires cancels the GC timer and reuses the entry.
 
 ### SSR
 
 ```ts
-// Server: embed in HTML
-import { serializeCache } from '@cioky/ripple-query'
+import { serializeCache, hydrateCache } from '@cioky/ripple-query'
 
+// Server: embed in HTML
 function onRenderHtml(pageContext) {
   return { documentHtml: `...${serializeCache()}...` }
 }
 
 // Client: hydrate before first render
-import { hydrateCache } from '@cioky/ripple-query'
 hydrateCache()
 ```
 

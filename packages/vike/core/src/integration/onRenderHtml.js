@@ -9,6 +9,7 @@ import { getTagAttributesString } from '../utils/getTagAttributesString.js';
 import { callCumulativeHooks } from '../utils/callCumulativeHooks.js';
 
 import { AsyncLocalStorage } from 'node:async_hooks';
+globalThis.__rq_cache_storage ??= new AsyncLocalStorage();
 globalThis.__ripple_page_context_storage ??= new AsyncLocalStorage();
 
 const onRenderHtml = async (pageContext) => {
@@ -51,16 +52,35 @@ const onRenderHtml = async (pageContext) => {
 			}
 		}
 
-		const enableStream = !!(
-			pageContext.config.stream ?? pageContext.config.rippleStream
-		);
+		// ponytail: per-request cache via AsyncLocalStorage.
+		// Each SSR render gets a fresh Map → no cross-request contamination.
+		return globalThis.__rq_cache_storage.run(new Map(), async () => {
+			const enableStream = !!(
+				pageContext.config.stream ?? pageContext.config.rippleStream
+			);
 
-		if (enableStream) {
-			const rippleStream = create_ssr_stream();
-			render(wrappedPage, { stream: rippleStream.sink }).catch((e) => {
-				console.error('[ripple] render err:', e?.message);
-			});
-			return escapeInject`<!DOCTYPE html>
+			if (enableStream) {
+				const rippleStream = create_ssr_stream();
+				render(wrappedPage, {
+					stream: rippleStream.sink,
+					closeStream: false,
+				})
+					.then(async () => {
+						try {
+							const mod = await import('@cioky/ripple-query');
+							if (typeof mod.flushPending === 'function')
+								await mod.flushPending();
+							if (typeof mod.serializeCache === 'function') {
+								const tag = mod.serializeCache();
+								if (tag) rippleStream.sink.push(tag);
+							}
+						} catch {}
+						rippleStream.sink.close();
+					})
+					.catch((e) => {
+						console.error('[ripple] render err:', e?.message);
+					});
+				return escapeInject`<!DOCTYPE html>
         <html${dangerouslySkipEscape(htmlAttributesString)}>
           <head>
             <meta charset="UTF-8" />
@@ -74,35 +94,50 @@ const onRenderHtml = async (pageContext) => {
             ${dangerouslySkipEscape(bodyHtmlEnd)}
           </body>
         </html>`;
-		}
+			}
 
-		let renderFn = () => render(wrappedPage, {});
-		if (typeof pageContext.ssrContextWrapper === 'function') {
-			renderFn = () => pageContext.ssrContextWrapper(() => render(wrappedPage, {}));
-		}
-		const { head, body, css, topLevelError } = await renderFn();
-		if (topLevelError) {
-			console.error('[@cioky/vike-core] SSR render error:', topLevelError);
-			throw topLevelError;
-		}
+			let renderFn = () => render(wrappedPage, {});
+			if (typeof pageContext.ssrContextWrapper === 'function') {
+				renderFn = () =>
+					pageContext.ssrContextWrapper(() =>
+						render(wrappedPage, {})
+					);
+			}
+			const { head, body, css, topLevelError } = await renderFn();
+			if (topLevelError) {
+				console.error(
+					'[@cioky/vike-core] SSR render error:',
+					topLevelError
+				);
+				throw topLevelError;
+			}
 
-		// Ripple's render() already extracts <head> content into `head` and CSS into `css`
-		const cssHtml = css?.size
-			? `<style data-ripple-ssr>${[...css].join('')}<` + `/style>`
-			: '';
+			const cssHtml = css?.size
+				? `<style data-ripple-ssr>${[...css].join('')}<` + `/style>`
+				: '';
 
-		pageContext.pageHtmlString = body;
-		await callCumulativeHooks(
-			pageContext.config.onAfterRenderHtml,
-			pageContext
-		);
+			// Serialize query cache from the per-request ALS store
+			let cacheTag = '';
+			try {
+				const mod = await import('@cioky/ripple-query');
+				if (typeof mod.flushPending === 'function')
+					await mod.flushPending();
+				if (typeof mod.serializeCache === 'function') {
+					cacheTag = mod.serializeCache();
+				}
+			} catch {}
+			pageContext.pageHtmlString = body;
+			await callCumulativeHooks(
+				pageContext.config.onAfterRenderHtml,
+				pageContext
+			);
 
-		return escapeInject`<!DOCTYPE html>
+			return escapeInject`<!DOCTYPE html>
       <html${dangerouslySkipEscape(htmlAttributesString)}>
         <head>
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          ${dangerouslySkipEscape(headHtmlBegin)}
+          ${dangerouslySkipEscape(cacheTag)}
           ${dangerouslySkipEscape(head)}
           ${dangerouslySkipEscape(cssHtml)}
           ${dangerouslySkipEscape(headHtml)}
@@ -114,6 +149,7 @@ const onRenderHtml = async (pageContext) => {
           ${dangerouslySkipEscape(bodyHtmlEnd)}
         </body>
       </html>`;
+		});
 	});
 };
 
@@ -129,11 +165,13 @@ function getHeadHtml(pageContext) {
 	if (description)
 		parts.push(`<meta name="description" content="${description}" />`);
 	if (image) parts.push(`<meta property="og:image" content="${image}">`);
-	const viewportTag = getViewportTag(getHeadSetting('viewport', pageContext));
+	const viewportTag = getViewportTag(
+		getHeadSetting('viewport', pageContext)
+	);
 	if (viewportTag) parts.push(viewportTag);
 	const headElements = [
-		...(pageContext.config.Head ?? []),
-		...(pageContext._configViaHook?.Head ?? [])
+		getHeadSetting('head', pageContext),
+		getHeadSetting('script', pageContext),
 	]
 		.filter(Boolean)
 		.map((h) => (typeof h === 'function' ? h(pageContext) : h))
@@ -152,21 +190,19 @@ function getViewportTag(viewport) {
 }
 
 function getTagAttributes(pageContext) {
+	const htmlAttributes = getHeadSetting('htmlAttributes', pageContext) || {};
+	const bodyAttributes = getHeadSetting('bodyAttributes', pageContext) || {};
 	return {
-		htmlAttributesString: getTagAttributesString(
-			pageContext.config.htmlAttributes
-		),
-		bodyAttributesString: getTagAttributesString(
-			pageContext.config.bodyAttributes
-		)
+		htmlAttributesString: getTagAttributesString(htmlAttributes),
+		bodyAttributesString: getTagAttributesString(bodyAttributes),
 	};
 }
 
 function getHtmlInjections(pageContext) {
 	return {
-		headHtmlBegin: (pageContext.config.headHtmlBegin ?? []).join('\n'),
-		headHtmlEnd: (pageContext.config.headHtmlEnd ?? []).join('\n'),
-		bodyHtmlBegin: (pageContext.config.bodyHtmlBegin ?? []).join('\n'),
-		bodyHtmlEnd: (pageContext.config.bodyHtmlEnd ?? []).join('\n')
+		headHtmlBegin: getHeadSetting('headHtmlBegin', pageContext) || '',
+		headHtmlEnd: getHeadSetting('headHtmlEnd', pageContext) || '',
+		bodyHtmlBegin: getHeadSetting('bodyHtmlBegin', pageContext) || '',
+		bodyHtmlEnd: getHeadSetting('bodyHtmlEnd', pageContext) || '',
 	};
 }
