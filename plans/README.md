@@ -12,7 +12,7 @@ when done.
 | 001  | Add characterization tests for @cioky/ripple-query-remult | P1 | L | — | DONE |
 | 002  | Replace deterministic BETTER_AUTH_SECRET with per-scaffold random secret | P1 | S | — | DONE |
 | 003  | Serialize query cache in streaming SSR path | P1 | M | 004 (flushPending fix) | DONE |
-| 004  | Fix core query() invalidation + implement GC + scope pending per-request | P1 | M | 001 | TODO |
+| 004  | Fix core query() invalidation + implement GC + scope pending per-request | P1 | M | 001 | DONE |
 | 005  | Fix useLiveQuery — cleanup SSE sub, handle errors, set error signal | P2 | S-M | — | TODO |
 | 006  | Add framework-agnostic infinite query to ripple-query core | P2 | M | 001 | TODO |
 

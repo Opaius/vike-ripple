@@ -1,9 +1,8 @@
-import { track, effect } from 'ripple';
+import { track } from 'ripple';
 import type { Tracked } from 'ripple';
 
 // ── Public Types ──────────────────────────────────────────
 
-/** Serializable tuple identifying a cache entry. */
 export type QueryKey = (
 	| string
 	| number
@@ -13,90 +12,90 @@ export type QueryKey = (
 	| undefined
 )[];
 
-/** Reactive status companion returned by `query()`. */
 export interface QueryInfo {
 	status: Tracked<'pending' | 'success' | 'error'>;
 	error: Tracked<Error | undefined>;
 }
 
 export interface QueryOptions {
-	/** Time in ms before data is considered stale (default: 0 — always fresh). */
 	staleTime?: number;
-	/** Time in ms before unused cache entry is garbage-collected (default: 5 min). */
 	gcTime?: number;
 }
 
 // ── Internal Types ────────────────────────────────────────
 
-/** @internal Cache entry for a single query key. */
-export interface QueryEntry<T = unknown> {
-	version: Tracked<number>;
+interface QueryEntry<T = unknown> {
 	data: Tracked<T | undefined>;
+	version: Tracked<number>;
 	status: Tracked<'pending' | 'success' | 'error'>;
 	error: Tracked<Error | undefined>;
 	subscribers: number;
-	gcTimer: ReturnType<typeof setTimeout> | null;
+	gcTimer: any;
 	lastFetch: number;
 	staleTime: number;
 	gcTime: number;
 	fetcher: (() => Promise<T>) | null;
 }
 
-const cache = new Map<string, QueryEntry>();
+// ── Per-request Cache ─────────────────────────────────────
+// Server: the integration (onRenderHtml) sets up an AsyncLocalStorage
+//   and runs each SSR request in `als.run(new Map(), ...)`.
+//   getQueryCache() reads from ALS → request-scoped → no cross-contamination.
+// Client: no ALS → falls back to a module-level singleton.
+//   Single-user per tab — shared cache is correct.
+
+let _fallbackCache = new Map<string, QueryEntry>();
+
+function _getStorage(): any {
+	return (globalThis as any).__rq_cache_storage;
+}
+
+export function getQueryCache(): Map<string, QueryEntry> {
+	const storage = _getStorage();
+	if (storage) {
+		const store = storage.getStore();
+		if (store) return store;
+	}
+	return _fallbackCache;
+}
+
+export function clearCache(): void {
+	getQueryCache().clear();
+}
 
 // ── Key Serialization ─────────────────────────────────────
 
 function serializeKey(key: QueryKey): string {
-	return JSON.stringify(key, (_, v) => {
-		if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
-			return Object.keys(v)
-				.sort()
-				.reduce<Record<string, unknown>>((acc, k) => {
-					acc[k] = (v as Record<string, unknown>)[k];
-					return acc;
-				}, {});
+	return JSON.stringify(key);
+}
+
+function getPending(): Array<Promise<void>> {
+	const storage = _getStorage();
+	if (storage) {
+		const store = storage.getStore();
+		if (store instanceof Map) {
+			if (!(store as any).__pending) {
+				(store as any).__pending = [];
+			}
+			return (store as any).__pending;
 		}
-		return v;
-	});
-}
-
-// ── Fetch ─────────────────────────────────────────────────
-
-async function fetchEntry<T>(
-	entry: QueryEntry<T>,
-	fetcher: () => Promise<T>,
-): Promise<void> {
-	entry.status.value = 'pending';
-	try {
-		const result = await fetcher();
-		entry.data.value = result;
-		entry.status.value = 'success';
-		entry.error.value = undefined;
-		entry.lastFetch = Date.now();
-	} catch (e: unknown) {
-		entry.error.value = e instanceof Error ? e : new Error(String(e));
-		entry.status.value = 'error';
 	}
+	// Client singleton
+	if (!_fallbackPending) _fallbackPending = [];
+	return _fallbackPending;
 }
 
-// ── Public API ────────────────────────────────────────────
+let _fallbackPending: Array<Promise<void>> | null = null;
 
-/**
- * Create or retrieve a cached query signal.
- *
- * ```ts
- * const [data, info] = query(['todos', { done: true }], () => fetchTodos())
- * ```
- *
- * The returned `data` signal auto-refetches when the entry is invalidated
- * via `invalidateKeys()` or `invalidateAll()`.
- */
+// ── query() ────────────────────────────────────────────────
+
 export function query<T>(
 	key: QueryKey,
 	fetcher: () => Promise<T>,
 	options: QueryOptions = {},
 ): [Tracked<T | undefined>, QueryInfo] {
 	const k = serializeKey(key);
+	const cache = getQueryCache();
 	let entry = cache.get(k) as QueryEntry<T> | undefined;
 
 	if (!entry) {
@@ -113,125 +112,117 @@ export function query<T>(
 			fetcher,
 		};
 		cache.set(k, entry);
-
-		// First creation: start fetch + wire up reactive refetch
-		queueMicrotask(() => fetchEntry(entry, fetcher));
-
-		// Use Ripple effect to re-fetch when version bumps (invalidation)
-		effect(() => {
-			entry!.version.value; // subscribe to version changes
-			fetchEntry(entry!, entry!.fetcher ?? fetcher);
-		});
+		runFetch(entry, fetcher);
 	} else {
 		entry.fetcher ??= fetcher;
+		// Clear GC timer — a new subscriber is joining
+		if (entry.gcTimer) {
+			clearTimeout(entry.gcTimer);
+			entry.gcTimer = null;
+		}
+		if (
+			entry.lastFetch > 0 &&
+			Date.now() - entry.lastFetch > entry.staleTime
+		) {
+			runFetch(entry, entry.fetcher ?? fetcher);
+		}
 	}
 
-	// Subscribe — cancel any pending GC
 	entry.subscribers++;
-	clearTimeout(entry.gcTimer);
-	entry.gcTimer = null;
-
-	// Stale check — bump version to trigger refetch via effect
-	if (
-		entry.lastFetch > 0 &&
-		Date.now() - entry.lastFetch > entry.staleTime
-	) {
-		entry.version.value += 1;
-	}
 
 	return [entry.data, { status: entry.status, error: entry.error }];
 }
+async function runFetch<T>(
+	entry: QueryEntry<T>,
+	fetcher: () => Promise<T>,
+): Promise<void> {
+	entry.status.value = 'pending';
+	const p = fetcher()
+		.then((result) => {
+			entry.data.value = result as T;
+			entry.status.value = 'success';
+			entry.error.value = undefined;
+			entry.lastFetch = Date.now();
+		})
+		.catch((e: unknown) => {
+			entry.status.value = 'error';
+			entry.error.value = e instanceof Error ? e : new Error(String(e));
+		});
+	getPending().push(p);
+	await p;
+}
 
-/**
- * Decrement subscriber count. When count reaches zero, start the GC timer.
- * Call this in a Ripple block's cleanup.
- */
+export async function flushPending(): Promise<void> {
+	const p = getPending();
+	await Promise.all(p);
+	p.length = 0;
+}
+
+export function invalidateKeys(prefix: QueryKey): void {
+	const p = serializeKey(prefix);
+	const cache = getQueryCache();
+	for (const [k, entry] of cache) {
+		if (k.startsWith(p)) {
+			entry.version.value += 1;
+			// Do NOT delete entry — active subscribers hold entry.data Tracked.
+			// Version bump + runFetch signals them to refetch.
+			// GC handles removal when subscribers hit zero.
+			if (entry.fetcher) {
+				runFetch(entry, entry.fetcher);
+			}
+		}
+	}
+}
+
+export function invalidateAll(): void {
+	const cache = getQueryCache();
+	for (const [, entry] of cache) {
+		entry.version.value += 1;
+		if (entry.fetcher) {
+			runFetch(entry, entry.fetcher);
+		}
+	}
+}
 export function unsubscribe(key: QueryKey): void {
 	const k = serializeKey(key);
+	const cache = getQueryCache();
 	const entry = cache.get(k);
 	if (!entry) return;
 
 	entry.subscribers--;
 	if (entry.subscribers <= 0) {
 		entry.subscribers = 0;
-		clearTimeout(entry.gcTimer);
+		if (entry.gcTimer) clearTimeout(entry.gcTimer);
 		entry.gcTimer = setTimeout(() => {
 			cache.delete(k);
 		}, entry.gcTime);
 	}
 }
 
-/**
- * Invalidate all cache entries whose serialized key starts with the
- * given prefix.
- *
- * Bumps each matching entry's `version` signal — the `effect()` watcher
- * picks it up and re-fetches automatically.
- *
- * ```ts
- * invalidateKeys(['todos'])         // invalidates ['todos'], ['todos', { done: true }]
- * invalidateKeys(['Task', 'find'])  // invalidates all Task finds
- * ```
- */
-export function invalidateKeys(prefix: QueryKey): void {
-	const p = serializeKey(prefix);
-	for (const [k, entry] of cache) {
-		if (k.startsWith(p)) {
-			entry.version.value += 1;
-		}
-	}
-}
-
-/** Invalidate every cached entry. */
-export function invalidateAll(): void {
-	for (const entry of cache.values()) {
-		entry.version.value += 1;
-	}
-}
-
-/** Low-level access to the cache map (debugging / SSR serialization). */
-export function getQueryCache(): Map<string, QueryEntry> {
-	return cache;
-}
 
 // ── SSR: Serialize → Hydrate ──────────────────────────────
 
 const SSR_ID = '__rq_cache';
 
-/**
- * Serialize cache entries into a `<script>` tag for SSR.
- * Embed this in your HTML head (e.g. in `onRenderHtml`).
- */
 export function serializeCache(): string {
+	const cache = getQueryCache();
 	const entries: Array<{ key: string; data: unknown }> = [];
 	for (const [key, entry] of cache) {
-		if (entry.status.value === 'success' && entry.data.value !== undefined) {
+		if (entry.status.value === 'success') {
 			entries.push({ key, data: entry.data.value });
 		}
 	}
-	return `<script id="${SSR_ID}" type="application/json">${JSON.stringify(
-		entries,
-	)}</script>`;
+	return `<script id="${SSR_ID}" type="application/json">${JSON.stringify(entries)}</script>`;
 }
 
-/**
- * Hydrate cache from serialized SSR data.
- * Call once on the client before the first render.
- */
 export function hydrateCache(): void {
 	const el = document.getElementById(SSR_ID);
 	if (!el) return;
+	const cache = getQueryCache();
 	try {
-		const entries: Array<{ key: string; data: unknown }> = JSON.parse(
-			el.textContent ?? '[]',
-		);
+		const entries = JSON.parse(el.textContent || '[]');
 		for (const { key, data } of entries) {
-			const existing = cache.get(key);
-			if (existing) {
-				existing.data.value = data as never;
-				existing.status.value = 'success';
-				existing.lastFetch = Date.now();
-			} else {
+			if (!cache.has(key)) {
 				const entry: QueryEntry = {
 					version: track(0),
 					data: track(data),
