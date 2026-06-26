@@ -1,14 +1,14 @@
 #!/usr/bin/env node
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 /**
  * @cioky/vike-tailwindcss setup — enables @apply in Ripple <style> blocks.
  *
  * Run once:  npx @cioky/vike-tailwindcss setup
  * Or add to project's package.json:  "postinstall": "@cioky/vike-tailwindcss setup"
  */
-import { createRequire } from 'module';
-import { join } from 'path';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const projectRoot = process.cwd();
@@ -28,7 +28,7 @@ function patchRippleApply() {
 		return;
 	}
 
-	let src = readFileSync(target, 'utf-8');
+	const src = readFileSync(target, 'utf-8');
 	if (src.includes('TW_PATCH_APPLY')) {
 		log('@apply patch already applied');
 		return;

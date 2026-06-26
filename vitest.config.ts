@@ -5,6 +5,6 @@ export default defineConfig({
 		include: ['packages/**/*.test.ts'],
 		exclude: ['node_modules', 'dist', 'coverage'],
 		globals: true,
-		environment: 'happy-dom',
-	},
+		environment: 'happy-dom'
+	}
 });

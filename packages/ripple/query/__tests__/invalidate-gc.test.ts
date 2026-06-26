@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 // ── Setup: same pattern as query-cache.test.ts ─────────────
 // unchecked cast: set up global ALS for query cache (test infrastructure)
@@ -22,7 +22,9 @@ describe('invalidateKeys', () => {
 	it('refetches matching entries', async () => {
 		// dynamic import: per-test module isolation
 		// static import would share module singletons between cases
-		const { query, invalidateKeys, flushPending } = await import('../src/index.ts');
+		const { query, invalidateKeys, flushPending } = await import(
+			'../src/index.ts'
+		);
 
 		await inRequest(async () => {
 			let callCount = 0;
@@ -44,7 +46,9 @@ describe('invalidateKeys', () => {
 	});
 
 	it('does not delete entries', async () => {
-		const { query, invalidateKeys, flushPending, getQueryCache } = await import('../src/index.ts');
+		const { query, invalidateKeys, flushPending, getQueryCache } = await import(
+			'../src/index.ts'
+		);
 
 		await inRequest(async () => {
 			const fetcher = async () => 'data';
@@ -65,22 +69,24 @@ describe('invalidateKeys', () => {
 
 describe('invalidateAll', () => {
 	it('refetches all entries', async () => {
-		const { query, invalidateAll, flushPending } = await import('../src/index.ts');
+		const { query, invalidateAll, flushPending } = await import(
+			'../src/index.ts'
+		);
 
 		await inRequest(async () => {
 			let callA = 0;
 			let callB = 0;
 			const fetcherA = async () => {
 				callA++;
-				return 'a' + callA;
+				return `a${callA}`;
 			};
 			const fetcherB = async () => {
 				callB++;
-				return 'b' + callB;
+				return `b${callB}`;
 			};
 
-			const [dataA] = query<string>(['a-key'], fetcherA);
-			const [dataB] = query<string>(['b-key'], fetcherB);
+			const [_dataA] = query<string>(['a-key'], fetcherA);
+			const [_dataB] = query<string>(['b-key'], fetcherB);
 			await flushPending();
 			expect(callA).toBe(1);
 			expect(callB).toBe(1);
@@ -98,10 +104,14 @@ describe('invalidateAll', () => {
 describe('unsubscribe (GC)', () => {
 	it('starts GC timer and eventually removes entry', async () => {
 		// dynamic import: per-test module isolation
-		const { query, unsubscribe, flushPending, getQueryCache } = await import('../src/index.ts');
+		const { query, unsubscribe, flushPending, getQueryCache } = await import(
+			'../src/index.ts'
+		);
 
 		// Only fake timer APIs, not Date — avoid interfering with stale checks
-		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+		vi.useFakeTimers({
+			toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval']
+		});
 		try {
 			await inRequest(async () => {
 				const fetcher = async () => 'gc-data';
@@ -123,9 +133,13 @@ describe('unsubscribe (GC)', () => {
 	});
 
 	it('re-subscribe cancels GC timer', async () => {
-		const { query, unsubscribe, flushPending, getQueryCache } = await import('../src/index.ts');
+		const { query, unsubscribe, flushPending, getQueryCache } = await import(
+			'../src/index.ts'
+		);
 
-		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+		vi.useFakeTimers({
+			toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval']
+		});
 		try {
 			await inRequest(async () => {
 				const fetcher = async () => 'first';

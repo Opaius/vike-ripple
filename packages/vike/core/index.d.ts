@@ -1,5 +1,6 @@
 declare module '@cioky/vike-core' {
 	import type { Plugin } from 'vite';
+
 	const vikeRipple: () => Plugin;
 	export default vikeRipple;
 }

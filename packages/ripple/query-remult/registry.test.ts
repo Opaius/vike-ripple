@@ -2,8 +2,12 @@
  * Unit tests for @cioky/ripple-query-remult — pure logic, no Ripple runtime needed.
  * Registry, entityKey, buildKey, invalidateEntity all work without active_block.
  */
-import { describe, it, expect, beforeEach } from 'vitest';
-import { registerInvalidator, triggerInvalidators, unregisterInvalidator } from './src/index';
+import { beforeEach, describe, expect, it } from 'vitest';
+import {
+	registerInvalidator,
+	triggerInvalidators,
+	unregisterInvalidator
+} from './src/index';
 
 // ── Registry ─────────────────────────────────────────────────
 
@@ -14,7 +18,9 @@ describe('registry', () => {
 
 	it('registers and triggers a single invalidator', () => {
 		let called = false;
-		registerInvalidator('test', () => { called = true; });
+		registerInvalidator('test', () => {
+			called = true;
+		});
 		triggerInvalidators('test');
 		expect(called).toBe(true);
 	});
@@ -39,7 +45,9 @@ describe('registry', () => {
 
 	it('cleanup function removes the invalidator', () => {
 		let called = false;
-		const cleanup = registerInvalidator('test', () => { called = true; });
+		const cleanup = registerInvalidator('test', () => {
+			called = true;
+		});
 		cleanup();
 		triggerInvalidators('test');
 		expect(called).toBe(false);
@@ -67,7 +75,9 @@ describe('registry', () => {
 
 	it('registering with empty key works', () => {
 		let called = false;
-		registerInvalidator('', () => { called = true; });
+		registerInvalidator('', () => {
+			called = true;
+		});
 		triggerInvalidators('');
 		expect(called).toBe(true);
 	});

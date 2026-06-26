@@ -166,7 +166,7 @@ function createPoolEntry(
 		startHeartbeat();
 	};
 
-	const handleClose = (event: CloseEvent) => {
+	const handleClose = (_event: CloseEvent) => {
 		ws = null;
 		stopHeartbeat();
 		if (disposed) return;

@@ -1,7 +1,14 @@
 #!/usr/bin/env node
-import { createRequire } from 'module';
-import { join, dirname } from 'path';
-import { readFileSync, writeFileSync, existsSync, symlinkSync, unlinkSync, lstatSync } from 'fs';
+import {
+	existsSync,
+	lstatSync,
+	readFileSync,
+	symlinkSync,
+	unlinkSync,
+	writeFileSync
+} from 'node:fs';
+import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
 
 const projectRoot = process.cwd();
 let exitCode = 0;
@@ -22,7 +29,7 @@ function patchVikeExtensions() {
 		warn('vike not found');
 		return;
 	}
-	let src = readFileSync(target, 'utf-8');
+	const src = readFileSync(target, 'utf-8');
 	if (src.includes("'tsrx'")) {
 		log('.tsrx already registered');
 		return;
@@ -46,7 +53,7 @@ function patchRippleDirect() {
 		warn('@ripple-ts/vite-plugin not found');
 		return;
 	}
-	let src = readFileSync(target, 'utf-8');
+	const src = readFileSync(target, 'utf-8');
 	if (src.includes("id.includes('?direct')")) {
 		log('?direct fix already applied');
 		return;
@@ -76,7 +83,7 @@ function patchRippleDirect() {
 function patchRippleApply() {
 	const target = resolveRipple('src/index.js');
 	if (!target) return;
-	let src = readFileSync(target, 'utf-8');
+	const src = readFileSync(target, 'utf-8');
 	if (src.includes('// @cioky/vike-core: apply fix')) {
 		log('Ripple apply fix already applied');
 		return;
@@ -102,7 +109,7 @@ function patchRippleServer() {
 		warn('Ripple server runtime not found');
 		return;
 	}
-	let src = readFileSync(serverIndexFile, 'utf-8');
+	const src = readFileSync(serverIndexFile, 'utf-8');
 	if (src.includes('/* patch: add track method */')) {
 		log('Ripple server track already patched');
 		return;
@@ -153,7 +160,7 @@ function patchVikeClientRouting() {
 		warn('vike client router not found');
 		return;
 	}
-	let src = readFileSync(target, 'utf-8');
+	const src = readFileSync(target, 'utf-8');
 	if (src.includes('@cioky/vike-core nav guard')) {
 		log('Vike client routing guard already applied');
 		return;
@@ -184,14 +191,14 @@ function patchVikeClientRouting() {
 function patchRippleJsxLang() {
 	const ripplePluginFile = resolveRipple('src/index.js');
 	if (!ripplePluginFile) return;
-	let src = readFileSync(ripplePluginFile, 'utf-8');
+	const src = readFileSync(ripplePluginFile, 'utf-8');
 	if (src.includes('lang: jsx')) {
 		log('Ripple JSX lang fix already applied');
 		return;
 	}
 	const patched = src.replace(
 		/return \{\s*\n\s*code,\s*\n\s*map\b/,
-		(match) => `return {\n\t\tcode,\n\t\tmap,\n\t\tlang: 'jsx'`
+		(_match) => `return {\n\t\tcode,\n\t\tmap,\n\t\tlang: 'jsx'`
 	);
 	if (patched === src) {
 		warn('Could not patch Ripple plugin JSX lang');
@@ -208,7 +215,7 @@ function resolveVike(rel) {
 	const p = join(projectRoot, 'node_modules', 'vike', rel);
 	if (existsSync(p)) return p;
 	try {
-		return req.resolve('vike/' + rel);
+		return req.resolve(`vike/${rel}`);
 	} catch {
 		return null;
 	}
@@ -218,7 +225,7 @@ function resolveRipple(rel) {
 	const p = join(projectRoot, 'node_modules', '@ripple-ts', 'vite-plugin', rel);
 	if (existsSync(p)) return p;
 	try {
-		return req.resolve('@ripple-ts/vite-plugin/' + rel);
+		return req.resolve(`@ripple-ts/vite-plugin/${rel}`);
 	} catch {
 		return null;
 	}
@@ -228,7 +235,7 @@ function resolveRipplePackage(rel) {
 	const p = join(projectRoot, 'node_modules', 'ripple', rel);
 	if (existsSync(p)) return p;
 	try {
-		return req.resolve('ripple/' + rel);
+		return req.resolve(`ripple/${rel}`);
 	} catch {
 		return null;
 	}
@@ -241,10 +248,7 @@ function resolveRipplePackage(rel) {
 
 function patchRippleDedupe() {
 	// Packages that import from 'ripple' and might resolve to the wrong copy
-	const packages = [
-		'@cioky/ripple-query',
-		'@cioky/ripple-query-remult',
-	];
+	const packages = ['@cioky/ripple-query', '@cioky/ripple-query-remult'];
 
 	// Find the project's ripple location
 	let projectRipple;
@@ -260,7 +264,7 @@ function patchRippleDedupe() {
 		// Find the package's real location (follow symlinks)
 		let pkgPath;
 		try {
-			pkgPath = dirname(req.resolve(pkg + '/package.json'));
+			pkgPath = dirname(req.resolve(`${pkg}/package.json`));
 		} catch {
 			continue; // package not installed
 		}
@@ -271,7 +275,7 @@ function patchRippleDedupe() {
 
 		// The package is symlinked to the monorepo. Resolve 'ripple' from
 		// the package's perspective by walking up from the symlink target.
-		const realPkgPath = req.resolve(pkg + '/package.json');
+		const realPkgPath = req.resolve(`${pkg}/package.json`);
 		const pkgDir = dirname(realPkgPath);
 		const pkgRipple = join(pkgDir, '..', '..', '..', 'node_modules', 'ripple');
 

@@ -1,3 +1,3 @@
-import { remult } from 'remult'
+import { remult } from 'remult';
 
-export const api = remult({ entities: [], getUser: async () => undefined })
+export const api = remult({ entities: [], getUser: async () => undefined });

@@ -8,10 +8,7 @@
 		"packages/vike/tailwindcss/vite.config.example.ts",
 		"packages/remult/partykit/src/sql-parser.ts"
 	],
-	"ignoreDependencies": [
-		"@pandacss/types",
-		"@cioky/ripple-query"
-	],
+	"ignoreDependencies": ["@pandacss/types", "@cioky/ripple-query"],
 	"workspaces": {
 		"packages/vike/core": {
 			"entry": ["src/index.js", "src/setup.js"]

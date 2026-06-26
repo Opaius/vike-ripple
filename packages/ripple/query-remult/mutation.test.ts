@@ -1,13 +1,16 @@
 /**
  * Unit tests for mutation() — pure logic, no Ripple runtime hooks needed.
  */
-import { describe, it, expect, vi } from 'vitest';
-import { mutation, registerInvalidator, type Repo } from './src/index';
+import { describe, expect, it, vi } from 'vitest';
+import { mutation, type Repo, registerInvalidator } from './src/index';
 
-function mockRepo<T>(key: string, overrides: Record<string, any> = {}): Repo<T> {
+function mockRepo<T>(
+	key: string,
+	overrides: Record<string, any> = {}
+): Repo<T> {
 	return {
 		metadata: { key },
-		...overrides,
+		...overrides
 	} as unknown as Repo<T>;
 }
 
@@ -74,7 +77,9 @@ describe('mutation', () => {
 		const spy = vi.fn();
 		registerInvalidator('OtherKey', spy);
 
-		await mutation(repo, 'insert', { invalidates: ['OtherKey'] }).mutate({ title: 'x' });
+		await mutation(repo, 'insert', { invalidates: ['OtherKey'] }).mutate({
+			title: 'x'
+		});
 
 		expect(spy).toHaveBeenCalledOnce();
 	});

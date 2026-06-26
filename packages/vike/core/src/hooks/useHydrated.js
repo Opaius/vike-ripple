@@ -1,5 +1,4 @@
-export { useHydrated };
-export { setHydrated };
+export { setHydrated, useHydrated };
 
 import { track } from 'ripple';
 

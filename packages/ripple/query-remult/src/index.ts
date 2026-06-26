@@ -1,14 +1,15 @@
 /**
  * @cioky/ripple-query-remult — Remult adapter for @cioky/ripple-query.
  */
-import { track } from 'ripple';
-import type { Tracked } from 'ripple';
+
 import {
-	invalidateKeys as rqInvalidateKeys,
-	invalidateAll as rqInvalidateAll,
 	getQueryCache,
 	type QueryKey,
+	invalidateAll as rqInvalidateAll,
+	invalidateKeys as rqInvalidateKeys
 } from '@cioky/ripple-query';
+import type { Tracked } from 'ripple';
+import { track } from 'ripple';
 
 export interface Repo<T> {
 	metadata: { key: string };
@@ -64,12 +65,12 @@ export function invalidateEntity(entityKey: string, method: string): void;
 export function invalidateEntity(
 	entityKey: string,
 	method: string,
-	params?: Record<string, unknown>,
+	params?: Record<string, unknown>
 ): void;
 export function invalidateEntity(
 	entityKey: string,
 	method?: string,
-	params?: Record<string, unknown>,
+	params?: Record<string, unknown>
 ): void {
 	const prefix: QueryKey = [entityKey];
 	if (method) prefix.push(method);
@@ -90,7 +91,9 @@ export function registerInvalidator(key: string, fn: () => void): () => void {
 }
 
 export function triggerInvalidators(key: string): void {
-	invalidatorMap.get(key)?.forEach(fn => fn());
+	invalidatorMap.get(key)?.forEach((fn) => {
+		fn();
+	});
 }
 
 export function unregisterInvalidator(key: string, fn: () => void): void {
@@ -100,7 +103,7 @@ export function unregisterInvalidator(key: string, fn: () => void): void {
 export function buildKey<T>(
 	repo: Repo<T>,
 	method: string,
-	params?: Record<string, unknown>,
+	params?: Record<string, unknown>
 ): QueryKey {
 	const base = [entityKey(repo), method] as QueryKey;
 	if (params && Object.keys(params).length > 0) {
@@ -113,28 +116,28 @@ export function createRemultQuery<T>(
 	repo: Repo<T>,
 	method: 'find',
 	params?: Record<string, unknown>,
-	options?: RemultQueryOptions,
+	options?: RemultQueryOptions
 ): RemultQueryResult<T[]>;
 
 export function createRemultQuery<T>(
 	repo: Repo<T>,
 	method: 'findFirst',
 	params?: Record<string, unknown>,
-	options?: RemultQueryOptions,
+	options?: RemultQueryOptions
 ): RemultQueryResult<T | undefined>;
 
 export function createRemultQuery<T>(
 	repo: Repo<T>,
 	method: 'count',
 	params?: Record<string, unknown>,
-	options?: RemultQueryOptions,
+	options?: RemultQueryOptions
 ): RemultQueryResult<number>;
 
 export function createRemultQuery<T>(
 	repo: Repo<T>,
 	method: string,
 	params?: Record<string, unknown>,
-	options?: RemultQueryOptions,
+	options?: RemultQueryOptions
 ): RemultQueryResult<unknown> {
 	const key = buildKey(repo, method, params);
 	const k = JSON.stringify(key);
@@ -143,7 +146,11 @@ export function createRemultQuery<T>(
 		// ponytail: skip cache on server — each SSR request fetches fresh data
 		if (typeof window !== 'undefined') {
 			const existing = getQueryCache().get(k);
-			if (existing && existing.status.value === 'success' && existing.data.value !== undefined) {
+			if (
+				existing &&
+				existing.status.value === 'success' &&
+				existing.data.value !== undefined
+			) {
 				return existing.data.value;
 			}
 		}
@@ -168,11 +175,16 @@ export function createRemultQuery<T>(
 		// Still populate cache on server so serializeCache() can send to client
 		if (!getQueryCache().has(k)) {
 			getQueryCache().set(k, {
-				version: track(0), data: track(result),
+				version: track(0),
+				data: track(result),
 				status: track<'pending' | 'success' | 'error'>('success'),
 				error: track<Error | undefined>(undefined),
-				subscribers: 0, gcTimer: null, lastFetch: Date.now(),
-				staleTime: 0, gcTime: 5 * 60 * 1000, fetcher: null,
+				subscribers: 0,
+				gcTimer: null,
+				lastFetch: Date.now(),
+				staleTime: 0,
+				gcTime: 5 * 60 * 1000,
+				fetcher: null
 			} as never);
 		}
 
@@ -187,19 +199,22 @@ export function createRemultQuery<T>(
 		invalidate: () => {
 			getQueryCache().delete(k);
 			if (options?.version) options.version.value += 1;
-		},
+		}
 	};
 }
 
 export function createInfiniteRemultQuery<T>(
 	repo: Repo<T>,
-	options: InfiniteRemultQueryConfig = {},
+	options: InfiniteRemultQueryConfig = {}
 ): InfiniteRemultQueryResult<T> {
 	const pageSize = options.pageSize ?? 20;
 	// Detect cursor field from orderBy if not explicitly set
 	const orderByKeys = options.orderBy ? Object.keys(options.orderBy) : [];
 	const cursorField = options.cursorField ?? orderByKeys[0] ?? 'id';
-	const sortDir = orderByKeys.length > 0 ? (options.orderBy as Record<string, unknown>)[orderByKeys[0]] : undefined;
+	const sortDir =
+		orderByKeys.length > 0
+			? (options.orderBy as Record<string, unknown>)[orderByKeys[0]]
+			: undefined;
 	const cursorOp = sortDir === 'desc' ? '$lt' : '$gt';
 
 	const hasNextPage = track(true);
@@ -215,13 +230,16 @@ export function createInfiniteRemultQuery<T>(
 		if (options.orderBy || options.where) {
 			const mergedWhere: Record<string, unknown> = {};
 			if (options.where) Object.assign(mergedWhere, options.where);
-			if (cursor != null) mergedWhere[cursorField] = { [cursorOp]: cursor } as Record<string, unknown>;
+			if (cursor != null)
+				mergedWhere[cursorField] = { [cursorOp]: cursor } as Record<
+					string,
+					unknown
+				>;
 			(params as any).where = mergedWhere;
 			if (options.orderBy) (params as any).orderBy = options.orderBy;
 		}
 		return params;
 	}
-
 
 	async function fetchPage(): Promise<void> {
 		isFetchingNextPage.value = true;
@@ -267,7 +285,14 @@ export function createInfiniteRemultQuery<T>(
 		pageVersion.value += 1;
 	}
 
-	return { fetcher, fetchNextPage, hasNextPage, isFetchingNextPage, error, reset };
+	return {
+		fetcher,
+		fetchNextPage,
+		hasNextPage,
+		isFetchingNextPage,
+		error,
+		reset
+	};
 }
 
 const subscribedEntities = new Set<string>();
@@ -277,7 +302,7 @@ export function subscribeEntity(entityName: string): void {
 	subscribedEntities.add(entityName);
 }
 
-export type { QueryKey, QueryInfo } from '@cioky/ripple-query';
+export type { QueryInfo, QueryKey } from '@cioky/ripple-query';
 
 // ── mutation ──────────────────────────────────────────────
 
@@ -296,11 +321,13 @@ export interface MutationOptions {
 export function mutation<T>(
 	repo: Repo<T>,
 	method: 'insert' | 'update' | 'delete' | 'save',
-	options: MutationOptions = {},
+	options: MutationOptions = {}
 ): MutationResult<T> {
 	const entityK = entityKey(repo);
 	const invalidKeys = options.invalidates
-		? (Array.isArray(options.invalidates) ? options.invalidates : [options.invalidates])
+		? Array.isArray(options.invalidates)
+			? options.invalidates
+			: [options.invalidates]
 		: [entityK];
 	const isLoading = track(false);
 	const error = track<Error | undefined>(undefined);
@@ -328,7 +355,9 @@ export function mutation<T>(
 				default:
 					throw new Error(`Unknown mutation method: ${method}`);
 			}
-			invalidKeys.forEach(k => triggerInvalidators(k));
+			invalidKeys.forEach((k) => {
+				triggerInvalidators(k);
+			});
 			options?.onInvalidate?.();
 			return result;
 		} catch (e) {

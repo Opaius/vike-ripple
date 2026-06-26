@@ -171,7 +171,14 @@ ripple-query-remult
 ## Out of Scope (v1)
 
 - Optimistic updates (v2)
-- Paginated / infinite queries (v2)
-- Mutation cache (v2 — for now, use `remult.repo(T).insert()` directly)
+- Mutation cache (v2 — for now, use `remult.repo(T).insert()` directly or
+  the `mutation()` helper in `@cioky/ripple-query-remult`)
 - Persisted cache to localStorage/IndexedDB (v2)
 - Offline support (v3)
+
+## Scope updates
+
+- **Infinite/paginated queries** — moved IN SCOPE. `createInfiniteQuery()`
+  is available in `@cioky/ripple-query` (framework-agnostic) and
+  `createInfiniteRemultQuery()` in `@cioky/ripple-query-remult` (Remult-
+  specific, with auto-cursor detection from `orderBy`).

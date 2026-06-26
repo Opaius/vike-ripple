@@ -1,14 +1,14 @@
 export { onRenderHtml };
 
-import { render, create_ssr_stream } from 'ripple/server';
-import { tsrx_element } from 'ripple/internal/server';
-import { escapeInject, dangerouslySkipEscape } from 'vike/server';
-import { setPageContext } from '../hooks/usePageContext.js';
-import { getHeadSetting } from './getHeadSetting.js';
-import { getTagAttributesString } from '../utils/getTagAttributesString.js';
-import { callCumulativeHooks } from '../utils/callCumulativeHooks.js';
-
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { tsrx_element } from 'ripple/internal/server';
+import { create_ssr_stream, render } from 'ripple/server';
+import { dangerouslySkipEscape, escapeInject } from 'vike/server';
+import { setPageContext } from '../hooks/usePageContext.js';
+import { callCumulativeHooks } from '../utils/callCumulativeHooks.js';
+import { getTagAttributesString } from '../utils/getTagAttributesString.js';
+import { getHeadSetting } from './getHeadSetting.js';
+
 globalThis.__rq_cache_storage ??= new AsyncLocalStorage();
 globalThis.__ripple_page_context_storage ??= new AsyncLocalStorage();
 
@@ -63,7 +63,7 @@ const onRenderHtml = async (pageContext) => {
 				const rippleStream = create_ssr_stream();
 				render(wrappedPage, {
 					stream: rippleStream.sink,
-					closeStream: false,
+					closeStream: false
 				})
 					.then(async () => {
 						try {
@@ -99,29 +99,23 @@ const onRenderHtml = async (pageContext) => {
 			let renderFn = () => render(wrappedPage, {});
 			if (typeof pageContext.ssrContextWrapper === 'function') {
 				renderFn = () =>
-					pageContext.ssrContextWrapper(() =>
-						render(wrappedPage, {})
-					);
+					pageContext.ssrContextWrapper(() => render(wrappedPage, {}));
 			}
 			const { head, body, css, topLevelError } = await renderFn();
 			if (topLevelError) {
-				console.error(
-					'[@cioky/vike-core] SSR render error:',
-					topLevelError
-				);
+				console.error('[@cioky/vike-core] SSR render error:', topLevelError);
 				throw topLevelError;
 			}
 
 			const cssHtml = css?.size
-				? `<style data-ripple-ssr>${[...css].join('')}<` + `/style>`
+				? `<style data-ripple-ssr>${[...css].join('')}</style>`
 				: '';
 
 			// Serialize query cache from the per-request ALS store
 			let cacheTag = '';
 			try {
 				const mod = await import('@cioky/ripple-query');
-				if (typeof mod.flushPending === 'function')
-					await mod.flushPending();
+				if (typeof mod.flushPending === 'function') await mod.flushPending();
 				if (typeof mod.serializeCache === 'function') {
 					cacheTag = mod.serializeCache();
 				}
@@ -165,13 +159,11 @@ function getHeadHtml(pageContext) {
 	if (description)
 		parts.push(`<meta name="description" content="${description}" />`);
 	if (image) parts.push(`<meta property="og:image" content="${image}">`);
-	const viewportTag = getViewportTag(
-		getHeadSetting('viewport', pageContext)
-	);
+	const viewportTag = getViewportTag(getHeadSetting('viewport', pageContext));
 	if (viewportTag) parts.push(viewportTag);
 	const headElements = [
 		getHeadSetting('head', pageContext),
-		getHeadSetting('script', pageContext),
+		getHeadSetting('script', pageContext)
 	]
 		.filter(Boolean)
 		.map((h) => (typeof h === 'function' ? h(pageContext) : h))
@@ -194,7 +186,7 @@ function getTagAttributes(pageContext) {
 	const bodyAttributes = getHeadSetting('bodyAttributes', pageContext) || {};
 	return {
 		htmlAttributesString: getTagAttributesString(htmlAttributes),
-		bodyAttributesString: getTagAttributesString(bodyAttributes),
+		bodyAttributesString: getTagAttributesString(bodyAttributes)
 	};
 }
 
@@ -203,6 +195,6 @@ function getHtmlInjections(pageContext) {
 		headHtmlBegin: getHeadSetting('headHtmlBegin', pageContext) || '',
 		headHtmlEnd: getHeadSetting('headHtmlEnd', pageContext) || '',
 		bodyHtmlBegin: getHeadSetting('bodyHtmlBegin', pageContext) || '',
-		bodyHtmlEnd: getHeadSetting('bodyHtmlEnd', pageContext) || '',
+		bodyHtmlEnd: getHeadSetting('bodyHtmlEnd', pageContext) || ''
 	};
 }

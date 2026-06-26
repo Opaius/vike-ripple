@@ -1,7 +1,7 @@
 export { onRenderClient };
 
-import { setPageContext } from '../hooks/usePageContext.js';
 import { setHydrated } from '../hooks/useHydrated.js';
+import { setPageContext } from '../hooks/usePageContext.js';
 
 // tsrx_element — wraps a component fn as a Ripple TSRX element (matches ripple/internal)
 const tsrx_element = (fn) => ({

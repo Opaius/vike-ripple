@@ -41,7 +41,7 @@ export function tsrxToTsx(code) {
 	//    @for (decl; key) {   →   {
 	result = result.replace(
 		directiveOpenRe,
-		(match, directiveWithArgs, elseEmpty, brace) => {
+		(_match, _directiveWithArgs, _elseEmpty, brace) => {
 			// The directive name and parenthesized args are dropped.
 			// All we keep is the brace (which opens the body block).
 			return brace;

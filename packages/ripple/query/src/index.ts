@@ -1,5 +1,5 @@
-import { track } from 'ripple';
 import type { Tracked } from 'ripple';
+import { track } from 'ripple';
 
 // ── Public Types ──────────────────────────────────────────
 
@@ -44,7 +44,7 @@ interface QueryEntry<T = unknown> {
 // Client: no ALS → falls back to a module-level singleton.
 //   Single-user per tab — shared cache is correct.
 
-let _fallbackCache = new Map<string, QueryEntry>();
+const _fallbackCache = new Map<string, QueryEntry>();
 
 function _getStorage(): any {
 	return (globalThis as any).__rq_cache_storage;
@@ -92,7 +92,7 @@ let _fallbackPending: Array<Promise<void>> | null = null;
 export function query<T>(
 	key: QueryKey,
 	fetcher: () => Promise<T>,
-	options: QueryOptions = {},
+	options: QueryOptions = {}
 ): [Tracked<T | undefined>, QueryInfo] {
 	const k = serializeKey(key);
 	const cache = getQueryCache();
@@ -109,7 +109,7 @@ export function query<T>(
 			lastFetch: 0,
 			staleTime: options.staleTime ?? 0,
 			gcTime: options.gcTime ?? 5 * 60 * 1000,
-			fetcher,
+			fetcher
 		};
 		cache.set(k, entry);
 		runFetch(entry, fetcher);
@@ -120,10 +120,7 @@ export function query<T>(
 			clearTimeout(entry.gcTimer);
 			entry.gcTimer = null;
 		}
-		if (
-			entry.lastFetch > 0 &&
-			Date.now() - entry.lastFetch > entry.staleTime
-		) {
+		if (entry.lastFetch > 0 && Date.now() - entry.lastFetch > entry.staleTime) {
 			runFetch(entry, entry.fetcher ?? fetcher);
 		}
 	}
@@ -134,7 +131,7 @@ export function query<T>(
 }
 async function runFetch<T>(
 	entry: QueryEntry<T>,
-	fetcher: () => Promise<T>,
+	fetcher: () => Promise<T>
 ): Promise<void> {
 	entry.status.value = 'pending';
 	const p = fetcher()
@@ -199,7 +196,6 @@ export function unsubscribe(key: QueryKey): void {
 	}
 }
 
-
 // ── SSR: Serialize → Hydrate ──────────────────────────────
 
 const SSR_ID = '__rq_cache';
@@ -233,7 +229,7 @@ export function hydrateCache(): void {
 					lastFetch: Date.now(),
 					staleTime: 0,
 					gcTime: 5 * 60 * 1000,
-					fetcher: null,
+					fetcher: null
 				};
 				cache.set(key, entry);
 			}
@@ -243,3 +239,10 @@ export function hydrateCache(): void {
 		// Malformed cache — skip silently
 	}
 }
+
+export type {
+	InfiniteQueryConfig,
+	InfiniteQueryResult
+} from './infinite-query.ts';
+// ── Infinite Query ────────────────────────────────────────
+export { createInfiniteQuery } from './infinite-query.ts';

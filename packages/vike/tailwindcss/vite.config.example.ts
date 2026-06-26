@@ -1,9 +1,9 @@
-import { defineConfig } from 'vite';
-import vike from 'vike/plugin';
-import { ripple } from '@ripple-ts/vite-plugin';
-import tailwindcss from '@tailwindcss/vite';
 import vikeRipple from '@cioky/vike-core';
 import vikeRippleTailwindcss from '@cioky/vike-tailwindcss';
+import { ripple } from '@ripple-ts/vite-plugin';
+import tailwindcss from '@tailwindcss/vite';
+import vike from 'vike/plugin';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
 	optimizeDeps: {

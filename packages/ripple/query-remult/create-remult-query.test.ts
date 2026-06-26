@@ -2,11 +2,12 @@
  * Characterization tests for createRemultQuery() — pure logic, no Ripple component runtime needed.
  * Covers: find, findFirst, count, unknown method, cache population, invalidate, entityKey, buildKey.
  */
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { clearCache, getQueryCache } from '@cioky/ripple-query';
 import { track } from 'ripple';
-import { createRemultQuery, entityKey, buildKey, type Repo } from './src/index';
-import { getQueryCache, clearCache } from '@cioky/ripple-query';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { buildKey, createRemultQuery, entityKey, type Repo } from './src/index';
 
 // ── ALS setup ────────────────────────────────────────────────────────────────────
 // Mirrors onRenderHtml.js — provides a request-scoped cache so getQueryCache() works
@@ -16,7 +17,8 @@ interface GlobalWithCache {
 }
 
 beforeAll(() => {
-	(globalThis as unknown as GlobalWithCache).__rq_cache_storage ??= new AsyncLocalStorage();
+	(globalThis as unknown as GlobalWithCache).__rq_cache_storage ??=
+		new AsyncLocalStorage();
 });
 
 beforeEach(() => {
@@ -32,7 +34,7 @@ function makeMockRepo<T>(overrides: Partial<Repo<T>> = {}): Repo<T> {
 		findFirst: async () => undefined,
 		count: async () => 0,
 		toJson: (x) => x,
-		...overrides,
+		...overrides
 	} as Repo<T>;
 }
 
@@ -45,9 +47,11 @@ describe('createRemultQuery', () => {
 			find: async (params) => {
 				expect(params).toEqual({ where: { status: 'active' } });
 				return items;
-			},
+			}
 		});
-		const result = createRemultQuery(repo, 'find', { where: { status: 'active' } });
+		const result = createRemultQuery(repo, 'find', {
+			where: { status: 'active' }
+		});
 		const data = await result.fetcher();
 		expect(data).toEqual(items);
 	});
@@ -55,7 +59,7 @@ describe('createRemultQuery', () => {
 	it('findFirst — calls repo.findFirst and returns the value', async () => {
 		const item = { id: 1 };
 		const repo = makeMockRepo<{ id: number }>({
-			findFirst: async () => item,
+			findFirst: async () => item
 		});
 		const result = createRemultQuery(repo, 'findFirst', { where: { id: 1 } });
 		const data = await result.fetcher();
@@ -64,7 +68,7 @@ describe('createRemultQuery', () => {
 
 	it('count — calls repo.count and returns the number', async () => {
 		const repo = makeMockRepo({
-			count: async () => 42,
+			count: async () => 42
 		});
 		const result = createRemultQuery(repo, 'count');
 		const data = await result.fetcher();
@@ -74,13 +78,15 @@ describe('createRemultQuery', () => {
 	it('unknown method throws', async () => {
 		const repo = makeMockRepo();
 		const result = createRemultQuery(repo, 'badMethod');
-		await expect(result.fetcher()).rejects.toThrow('Unknown Remult method: badMethod');
+		await expect(result.fetcher()).rejects.toThrow(
+			'Unknown Remult method: badMethod'
+		);
 	});
 
 	it('cache population — after fetcher resolves, cache has entry with status success', async () => {
 		const items = [{ id: 1 }];
 		const repo = makeMockRepo<{ id: number }>({
-			find: async () => items,
+			find: async () => items
 		});
 		const method = 'find';
 		const params = { where: { id: 1 } };
@@ -96,9 +102,14 @@ describe('createRemultQuery', () => {
 		const items = [{ id: 1 }];
 		const version = track(0);
 		const repo = makeMockRepo<{ id: number }>({
-			find: async () => items,
+			find: async () => items
 		});
-		const result = createRemultQuery(repo, 'find', { where: { id: 1 } }, { version });
+		const result = createRemultQuery(
+			repo,
+			'find',
+			{ where: { id: 1 } },
+			{ version }
+		);
 		await result.fetcher();
 		const key = JSON.stringify(buildKey(repo, 'find', { where: { id: 1 } }));
 		expect(getQueryCache().has(key)).toBe(true);
@@ -116,6 +127,10 @@ describe('entityKey / buildKey', () => {
 
 	it('buildKey returns array with entity key, method, and params', () => {
 		const repo = makeMockRepo();
-		expect(buildKey(repo, 'find', { where: { x: 1 } })).toEqual(['TestEntity', 'find', { where: { x: 1 } }]);
+		expect(buildKey(repo, 'find', { where: { x: 1 } })).toEqual([
+			'TestEntity',
+			'find',
+			{ where: { x: 1 } }
+		]);
 	});
 });

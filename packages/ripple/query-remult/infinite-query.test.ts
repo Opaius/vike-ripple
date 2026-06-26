@@ -1,19 +1,21 @@
 /**
  * Characterization tests for createInfiniteRemultQuery — pure logic, no Ripple runtime needed.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createInfiniteRemultQuery } from './src/index';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Repo } from './src/index';
+import { createInfiniteRemultQuery } from './src/index';
 
 // ── Helpers ─────────────────────────────────────────────────
 
-function makeMockRepo<T>(findImpl: (opts: Record<string, unknown>) => Promise<T[]>): Repo<T> {
+function makeMockRepo<T>(
+	findImpl: (opts: Record<string, unknown>) => Promise<T[]>
+): Repo<T> {
 	return {
 		metadata: { key: 'TestEntity' },
 		find: findImpl,
 		findFirst: async () => undefined,
 		count: async () => 0,
-		toJson: (x) => x,
+		toJson: (x) => x
 	} as Repo<T>;
 }
 
@@ -29,7 +31,9 @@ describe('createInfiniteRemultQuery', () => {
 	});
 
 	it('first page with next — returns pageSize items, hasNextPage is true when mock returns pageSize+1', async () => {
-		const mockFind = vi.fn(async (_opts: Record<string, unknown>) => generateItems(21));
+		const mockFind = vi.fn(async (_opts: Record<string, unknown>) =>
+			generateItems(21)
+		);
 		const result = createInfiniteRemultQuery(makeMockRepo(mockFind));
 
 		const items = await result.fetcher();
@@ -40,7 +44,9 @@ describe('createInfiniteRemultQuery', () => {
 	});
 
 	it('last page — hasNextPage is false when mock returns exactly pageSize items', async () => {
-		const mockFind = vi.fn(async (_opts: Record<string, unknown>) => generateItems(20));
+		const mockFind = vi.fn(async (_opts: Record<string, unknown>) =>
+			generateItems(20)
+		);
 		const result = createInfiniteRemultQuery(makeMockRepo(mockFind));
 
 		const items = await result.fetcher();
@@ -93,7 +99,7 @@ describe('createInfiniteRemultQuery', () => {
 		});
 		const result = createInfiniteRemultQuery(makeMockRepo(mockFind), {
 			orderBy: { id: 'asc' },
-			cursorField: 'id',
+			cursorField: 'id'
 		});
 
 		await result.fetcher(); // page 1: items 1‑20, cursor advances to 20

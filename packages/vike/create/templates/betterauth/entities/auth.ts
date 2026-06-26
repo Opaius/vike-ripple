@@ -1,91 +1,130 @@
-import { Allow, Entity, Fields, Relations, Validators } from 'remult'
+import { Allow, Entity, Fields, Relations, Validators } from 'remult';
 
-const Roles = { admin: 'admin' }
+const Roles = { admin: 'admin' };
 
-@Entity('user', { allowApiCrud: Roles.admin, allowApiRead: Allow.authenticated })
+@Entity('user', {
+	allowApiCrud: Roles.admin,
+	allowApiRead: Allow.authenticated
+})
 export class User {
-	@Fields.string({ required: true, minLength: 8, maxLength: 40, validate: Validators.unique(), allowApiUpdate: false })
-	id!: string
+	@Fields.string({
+		required: true,
+		minLength: 8,
+		maxLength: 40,
+		validate: Validators.unique(),
+		allowApiUpdate: false
+	})
+	id!: string;
 	@Fields.string({ required: true })
-	name = ''
+	name = '';
 	@Fields.string({})
-	email = ''
+	email = '';
 	@Fields.boolean({})
-	emailVerified = false
+	emailVerified = false;
 	@Fields.string({ required: false })
-	image = ''
+	image = '';
 	@Fields.createdAt({})
-	createdAt!: Date
+	createdAt!: Date;
 	@Fields.updatedAt({})
-	updatedAt!: Date
+	updatedAt!: Date;
 }
 
 @Entity('session', { allowApiCrud: Roles.admin })
 export class Session {
-	@Fields.string({ required: true, minLength: 8, maxLength: 40, validate: Validators.unique(), allowApiUpdate: false })
-	id!: string
+	@Fields.string({
+		required: true,
+		minLength: 8,
+		maxLength: 40,
+		validate: Validators.unique(),
+		allowApiUpdate: false
+	})
+	id!: string;
 	@Fields.date({ required: true })
-	expiresAt = new Date()
+	expiresAt = new Date();
 	@Fields.string({})
-	token = ''
+	token = '';
 	@Fields.createdAt({})
-	createdAt!: Date
+	createdAt!: Date;
 	@Fields.updatedAt({ required: true, allowApiUpdate: false })
-	updatedAt!: Date
+	updatedAt!: Date;
 	@Fields.string({ required: false })
-	ipAddress = ''
+	ipAddress = '';
 	@Fields.string({ required: false })
-	userAgent = ''
+	userAgent = '';
 	@Fields.string({ required: true })
-	userId = ''
+	userId = '';
 	@Relations.toOne(() => User, 'id')
-	user!: User
+	user!: User;
 }
 
 @Entity('account', { allowApiCrud: Roles.admin })
 export class Account {
-	@Fields.string({ required: true, minLength: 8, maxLength: 40, validate: Validators.unique(), allowApiUpdate: false })
-	id!: string
+	@Fields.string({
+		required: true,
+		minLength: 8,
+		maxLength: 40,
+		validate: Validators.unique(),
+		allowApiUpdate: false
+	})
+	id!: string;
 	@Fields.string({ required: true, allowApiUpdate: false })
-	accountId = ''
+	accountId = '';
 	@Fields.string({ required: true, allowApiUpdate: false })
-	providerId = ''
+	providerId = '';
 	@Fields.string({ required: true })
-	userId = ''
+	userId = '';
 	@Relations.toOne(() => User, 'id')
-	user!: User
+	user!: User;
 	@Fields.string({ required: false, allowApiUpdate: false })
-	accessToken = ''
+	accessToken = '';
 	@Fields.string({ required: false, allowApiUpdate: false })
-	refreshToken = ''
+	refreshToken = '';
 	@Fields.string({ required: false })
-	idToken = ''
+	idToken = '';
 	@Fields.date({ required: false })
-	accessTokenExpiresAt = new Date()
+	accessTokenExpiresAt = new Date();
 	@Fields.date({ required: false })
-	refreshTokenExpiresAt = new Date()
+	refreshTokenExpiresAt = new Date();
 	@Fields.string({ required: false })
-	scope = ''
+	scope = '';
 	@Fields.string({ required: false, allowApiUpdate: false })
-	password = ''
-	@Fields.createdAt({ required: true, defaultValue: () => new Date(), allowApiUpdate: false })
-	createdAt!: Date
+	password = '';
+	@Fields.createdAt({
+		required: true,
+		defaultValue: () => new Date(),
+		allowApiUpdate: false
+	})
+	createdAt!: Date;
 	@Fields.updatedAt({ required: true, allowApiUpdate: false })
-	updatedAt!: Date
+	updatedAt!: Date;
 }
 
 @Entity('verification', { allowApiCrud: Roles.admin })
 export class Verification {
-	@Fields.string({ required: true, minLength: 8, maxLength: 40, validate: Validators.unique(), allowApiUpdate: false })
-	id!: string
+	@Fields.string({
+		required: true,
+		minLength: 8,
+		maxLength: 40,
+		validate: Validators.unique(),
+		allowApiUpdate: false
+	})
+	id!: string;
 	@Fields.string({ required: true })
-	identifier = ''
+	identifier = '';
 	@Fields.string({ required: true })
-	value = ''
+	value = '';
 	@Fields.date({ required: true })
-	expiresAt = new Date()
-	@Fields.createdAt({ required: true, defaultValue: () => new Date(), allowApiUpdate: false })
-	createdAt!: Date
-	@Fields.updatedAt({ required: true, defaultValue: () => new Date(), allowApiUpdate: false })
-	updatedAt!: Date
+	expiresAt = new Date();
+	@Fields.createdAt({
+		required: true,
+		defaultValue: () => new Date(),
+		allowApiUpdate: false
+	})
+	createdAt!: Date;
+	@Fields.updatedAt({
+		required: true,
+		defaultValue: () => new Date(),
+		allowApiUpdate: false
+	})
+	updatedAt!: Date;
 }

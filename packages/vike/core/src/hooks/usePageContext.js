@@ -1,5 +1,4 @@
-export { usePageContext };
-export { setPageContext };
+export { setPageContext, usePageContext };
 
 import { track } from 'ripple';
 

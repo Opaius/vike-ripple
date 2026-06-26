@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 // ── Setup: like onRenderHtml.js does ────────────────────
 beforeAll(() => {
@@ -41,7 +41,7 @@ describe('clearCache', () => {
 			inRequest(() => {
 				getQueryCache().set('b', {} as any);
 				return getQueryCache().size;
-			}),
+			})
 		]);
 
 		expect(sizeA).toBe(0); // cleared
@@ -63,7 +63,7 @@ describe('cross-request contamination', () => {
 			inRequest(() => {
 				getQueryCache().set('user-b-data', { ssn: '987-65-4321' });
 				return [...getQueryCache().keys()];
-			}),
+			})
 		]);
 
 		expect(results[0]).toEqual(['user-a-data']);
@@ -111,7 +111,7 @@ describe('serializeCache / hydrateCache', () => {
 				lastFetch: Date.now(),
 				staleTime: 0,
 				gcTime: 5 * 60 * 1000,
-				fetcher: null,
+				fetcher: null
 			});
 			return serializeCache();
 		});
@@ -121,7 +121,9 @@ describe('serializeCache / hydrateCache', () => {
 	});
 
 	it('roundtrip: SSR serialize → client hydrate → data matches', async () => {
-		const { getQueryCache, serializeCache, hydrateCache } = await import('../src/index.ts');
+		const { getQueryCache, serializeCache, hydrateCache } = await import(
+			'../src/index.ts'
+		);
 
 		// SSR side: populate and serialize
 		const ssrTag = await inRequest(() => {
@@ -136,7 +138,7 @@ describe('serializeCache / hydrateCache', () => {
 				lastFetch: Date.now(),
 				staleTime: 0,
 				gcTime: 5 * 60 * 1000,
-				fetcher: null,
+				fetcher: null
 			});
 			return serializeCache();
 		});
@@ -249,7 +251,7 @@ describe('memory bounds', () => {
 			const key = JSON.stringify(['big-data']);
 			const bigArray = Array.from({ length: 1000 }, (_, i) => ({
 				id: i,
-				title: 'x'.repeat(100),
+				title: 'x'.repeat(100)
 			}));
 			getQueryCache().set(key, {
 				version: { value: 0 } as any,
@@ -261,7 +263,7 @@ describe('memory bounds', () => {
 				lastFetch: Date.now(),
 				staleTime: 0,
 				gcTime: 5 * 60 * 1000,
-				fetcher: null,
+				fetcher: null
 			});
 			return serializeCache();
 		});

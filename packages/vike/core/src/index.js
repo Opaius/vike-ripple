@@ -12,8 +12,9 @@
  * export default defineConfig({ plugins: [vikeRipple()] })
  * ```
  */
-import vike from 'vike/plugin';
+
 import { ripple } from '@ripple-ts/vite-plugin';
+import vike from 'vike/plugin';
 export default function vikeRipple() {
 	return [
 		vike(),
@@ -24,14 +25,14 @@ export default function vikeRipple() {
 			config() {
 				return {
 					resolve: {
-						dedupe: ['ripple'],
+						dedupe: ['ripple']
 					},
 					optimizeDeps: {
 						include: [
 							'ripple',
 							'@cioky/ripple-query',
-							'@cioky/ripple-query-remult',
-						],
+							'@cioky/ripple-query-remult'
+						]
 					},
 					environments: {
 						ssr: {
@@ -39,13 +40,13 @@ export default function vikeRipple() {
 								dedupe: ['ripple'],
 								noExternal: [
 									'@cioky/ripple-query',
-									'@cioky/ripple-query-remult',
-								],
-							},
-						},
-					},
+									'@cioky/ripple-query-remult'
+								]
+							}
+						}
+					}
 				};
-			},
-		},
+			}
+		}
 	];
 }

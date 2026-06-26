@@ -5,9 +5,9 @@
  * Run once:  npx @cioky/vike-pandacss setup
  * Or add to project's package.json:  "postinstall": "@cioky/vike-pandacss setup"
  */
-import { existsSync, readFileSync, writeFileSync } from 'fs';
-import { createRequire } from 'module';
-import { join } from 'path';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
 
 const projectRoot = process.cwd();
 let exitCode = 0;
@@ -26,7 +26,7 @@ function patchRippleApply() {
 		return;
 	}
 
-	let src = readFileSync(target, 'utf-8');
+	const src = readFileSync(target, 'utf-8');
 	if (src.includes('PANDA_PATCH_APPLY')) {
 		log('@apply patch already applied');
 		return;

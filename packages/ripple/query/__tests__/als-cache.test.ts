@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll } from 'vitest';
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 // Setup ALS like onRenderHtml.js does
 beforeAll(() => {
@@ -27,7 +27,7 @@ describe('ALS per-request cache isolation', () => {
 				const c = getQueryCache();
 				c.set('req-b', { data: 'from-b' });
 				return [...c.keys()];
-			}),
+			})
 		]);
 
 		expect(results[0]).toEqual(['req-a']);
@@ -80,7 +80,7 @@ describe('clearCache and serialization', () => {
 				lastFetch: Date.now(),
 				staleTime: 0,
 				gcTime: 5 * 60 * 1000,
-				fetcher: null,
+				fetcher: null
 			});
 
 			const tag = serializeCache();
@@ -95,7 +95,7 @@ describe('clearCache and serialization', () => {
 
 		const key = JSON.stringify(['cached-entity', 'find']);
 		const ssrData = JSON.stringify([
-			{ key, data: [{ id: 1, name: 'hydrated' }] },
+			{ key, data: [{ id: 1, name: 'hydrated' }] }
 		]);
 
 		// Simulate the SSR script tag that hydrateCache reads
